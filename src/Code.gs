@@ -116,6 +116,7 @@ function createReservation(payload) {
     const amount = stay.nights * Number(selected.nightRate || 0);
     const status = 'En attente';
     const createdAt = new Date();
+    const contactChannel = email ? 'Mail' : 'Téléphone';
 
     const row = [
       id,
@@ -135,7 +136,7 @@ function createReservation(payload) {
       'Micro-app',
       comment,
       'À valider réception',
-      'Non',
+      contactChannel,
       '',
       selected.reason || '',
     ];
