@@ -9,30 +9,47 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    env:
+      CLASP_SCRIPT_ID: ${{ secrets.CLASP_SCRIPT_ID }}
+      CLASP_CREDENTIALS: ${{ secrets.CLASP_CREDENTIALS }}
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Check deployment secrets
+        id: secrets
+        run: |
+          if [ -z "$CLASP_SCRIPT_ID" ] || [ -z "$CLASP_CREDENTIALS" ]; then
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            echo "Secrets CLASP_SCRIPT_ID or CLASP_CREDENTIALS are missing. Skipping Apps Script deploy."
+          else
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Setup Node
+        if: steps.secrets.outputs.ready == 'true'
         uses: actions/setup-node@v4
         with:
           node-version: 20
 
       - name: Install clasp
+        if: steps.secrets.outputs.ready == 'true'
         run: npm install -g @google/clasp
 
       - name: Configure clasp
+        if: steps.secrets.outputs.ready == 'true'
         run: |
           cat > ~/.clasprc.json <<'JSON'
-          ${{ secrets.CLASP_CREDENTIALS }}
+          $CLASP_CREDENTIALS
           JSON
           cat > .clasp.json <<JSON
           {
-            "scriptId": "${{ secrets.CLASP_SCRIPT_ID }}",
+            "scriptId": "$CLASP_SCRIPT_ID",
             "rootDir": "src"
           }
           JSON
 
       - name: Push Apps Script source
+        if: steps.secrets.outputs.ready == 'true'
         run: clasp push --force
