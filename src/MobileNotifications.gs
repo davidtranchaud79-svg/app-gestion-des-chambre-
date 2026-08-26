@@ -1,18 +1,16 @@
-// Notifications téléphone via Telegram.
+// Notifications téléphone via OneSignal Web Push.
 // À configurer dans Propriétés du script :
-// TELEGRAM_BOT_TOKEN = token donné par BotFather
-// TELEGRAM_CHAT_ID = identifiant du chat Telegram à notifier
+// ONESIGNAL_REST_API_KEY = clé REST API OneSignal (NE PAS la mettre dans le code)
+
+const ONESIGNAL_APP_ID = 'c1c76342-2445-4ad8-9335-9563c23e9854';
+const ONESIGNAL_ADMIN_URL = 'https://davidtranchaud79-svg.github.io/app-gestion-des-chambre-/admin.html';
 
 function setupMobileNotifications() {
-  const settings = mobileGetTelegramSettings_();
-  if (!settings.ok) {
-    throw new Error(settings.error);
-  }
+  const settings = mobileGetOneSignalSettings_();
+  if (!settings.ok) throw new Error(settings.error);
 
   const ss = SpreadsheetApp.openById(CONFIG.spreadsheetId);
-  if (typeof ensureAdminSheets_ === 'function') {
-    ensureAdminSheets_(ss);
-  }
+  if (typeof ensureAdminSheets_ === 'function') ensureAdminSheets_(ss);
 
   const sheet = ss.getSheetByName(CONFIG.sheets.adminNotifications);
   const lastRow = sheet ? Math.max(1, sheet.getLastRow()) : 1;
@@ -20,23 +18,15 @@ function setupMobileNotifications() {
 
   installMobileNotificationTrigger();
 
-  const test = mobileSendTelegram_('Test notification portable', [
-    'Notification portable opérationnelle.',
-    mobileGetAdminUrl_() ? 'Admin : ' + mobileGetAdminUrl_() : '',
-  ]);
+  const test = mobileSendOneSignal_('Test notification portable', 'Notification portable opérationnelle.', ONESIGNAL_ADMIN_URL);
+  if (!test.ok) throw new Error(test.error || 'Notification portable non envoyée.');
 
-  if (!test.ok) {
-    throw new Error(test.error || 'Notification portable non envoyée.');
-  }
-
-  return 'Notifications téléphone activées. Scan automatique toutes les minutes.';
+  return 'Notifications téléphone OneSignal activées. Scan automatique toutes les minutes.';
 }
 
 function installMobileNotificationTrigger() {
   ScriptApp.getProjectTriggers().forEach((trigger) => {
-    if (trigger.getHandlerFunction() === 'mobileScanAndNotify') {
-      ScriptApp.deleteTrigger(trigger);
-    }
+    if (trigger.getHandlerFunction() === 'mobileScanAndNotify') ScriptApp.deleteTrigger(trigger);
   });
 
   ScriptApp.newTrigger('mobileScanAndNotify')
@@ -48,29 +38,18 @@ function installMobileNotificationTrigger() {
 }
 
 function testMobileNotification() {
-  const result = mobileSendTelegram_('Test notification portable', [
-    'Notification portable opérationnelle.',
-    mobileGetAdminUrl_() ? 'Admin : ' + mobileGetAdminUrl_() : '',
-  ]);
-
-  if (!result.ok) {
-    throw new Error(result.error || 'Notification portable non envoyée.');
-  }
-
-  return 'Notification portable envoyée.';
+  const result = mobileSendOneSignal_('Test notification portable', 'Notification portable opérationnelle.', ONESIGNAL_ADMIN_URL);
+  if (!result.ok) throw new Error(result.error || 'Notification portable non envoyée.');
+  return 'Notification portable OneSignal envoyée.';
 }
 
 function mobileScanAndNotify() {
   const lock = LockService.getScriptLock();
-  if (!lock.tryLock(10000)) {
-    return 'Scan mobile déjà en cours.';
-  }
+  if (!lock.tryLock(10000)) return 'Scan mobile déjà en cours.';
 
   try {
     const ss = SpreadsheetApp.openById(CONFIG.spreadsheetId);
-    if (typeof ensureAdminSheets_ === 'function') {
-      ensureAdminSheets_(ss);
-    }
+    if (typeof ensureAdminSheets_ === 'function') ensureAdminSheets_(ss);
 
     const sheet = ss.getSheetByName(CONFIG.sheets.adminNotifications);
     if (!sheet) return 'Onglet Admin_Notifications introuvable.';
@@ -84,13 +63,8 @@ function mobileScanAndNotify() {
       return 'Aucune notification à traiter.';
     }
 
-    if (lastDone >= lastRow) {
-      return 'Aucune nouvelle notification.';
-    }
-
-    if (lastDone < 1 || lastDone > lastRow) {
-      lastDone = 1;
-    }
+    if (lastDone >= lastRow) return 'Aucune nouvelle notification.';
+    if (lastDone < 1 || lastDone > lastRow) lastDone = 1;
 
     const startRow = Math.max(2, lastDone + 1);
     const values = sheet.getRange(startRow, 1, lastRow - startRow + 1, 6).getValues();
@@ -109,12 +83,9 @@ function mobileScanAndNotify() {
 
       const notification = mobileBuildNotification_(item);
       if (notification) {
-        const result = mobileSendTelegram_(notification.title, notification.lines);
-        if (!result.ok) {
-          throw new Error(result.error || 'Notification Telegram non envoyée.');
-        }
-
-        sheet.getRange(rowNumber, 6).setValue('Mobile envoyée ' + mobileFormatDateTime_(new Date()));
+        const result = mobileSendOneSignal_(notification.title, notification.body, ONESIGNAL_ADMIN_URL);
+        if (!result.ok) throw new Error(result.error || 'Notification OneSignal non envoyée.');
+        sheet.getRange(rowNumber, 6).setValue('Push envoyé ' + mobileFormatDateTime_(new Date()));
         sent++;
       }
 
@@ -133,100 +104,77 @@ function mobileBuildNotification_(item) {
   if (type === 'NOUVELLE_RESERVATION') {
     return {
       title: 'Nouvelle réservation à valider',
-      lines: mobileNotificationLines_(item),
+      body: mobileNotificationBody_(item),
     };
   }
 
   if (type === 'ANOMALIES') {
     return {
       title: 'Anomalie réservation détectée',
-      lines: mobileNotificationLines_(item),
+      body: mobileNotificationBody_(item),
     };
   }
 
   if (type === 'ANOMALIE_VALIDATION') {
     return {
       title: 'Blocage validation réservation',
-      lines: mobileNotificationLines_(item),
+      body: mobileNotificationBody_(item),
     };
   }
 
   return null;
 }
 
-function mobileNotificationLines_(item) {
-  const lines = [
-    item.date ? 'Date : ' + mobileFormatDateTime_(item.date) : '',
-    item.level ? 'Niveau : ' + item.level : '',
-    item.reference ? 'Référence : ' + item.reference : '',
-    item.message ? 'Message : ' + mobileLimitText_(item.message, 900) : '',
-  ];
-
-  const adminUrl = mobileGetAdminUrl_();
-  if (adminUrl) lines.push('Admin : ' + adminUrl);
-
-  return lines.filter(Boolean);
+function mobileNotificationBody_(item) {
+  return [
+    item.reference ? 'Réf. ' + item.reference : '',
+    item.message ? mobileLimitText_(item.message, 180) : '',
+  ].filter(Boolean).join(' — ');
 }
 
-function mobileSendTelegram_(title, lines) {
-  const settings = mobileGetTelegramSettings_();
+function mobileSendOneSignal_(title, body, url) {
+  const settings = mobileGetOneSignalSettings_();
   if (!settings.ok) {
     mobileLog_('warning', settings.error);
     return { ok: false, skipped: true, error: settings.error };
   }
 
-  const response = UrlFetchApp.fetch('https://api.telegram.org/bot' + settings.token + '/sendMessage', {
+  const payload = {
+    app_id: ONESIGNAL_APP_ID,
+    included_segments: ['Subscribed Users'],
+    headings: { en: title, fr: title },
+    contents: { en: body || title, fr: body || title },
+    url: url || ONESIGNAL_ADMIN_URL,
+  };
+
+  const response = UrlFetchApp.fetch('https://api.onesignal.com/notifications?c=push', {
     method: 'post',
     contentType: 'application/json',
+    headers: {
+      Authorization: 'Key ' + settings.apiKey,
+    },
     muteHttpExceptions: true,
-    payload: JSON.stringify({
-      chat_id: settings.chatId,
-      text: mobileTelegramText_(title, lines),
-      disable_web_page_preview: true,
-    }),
+    payload: JSON.stringify(payload),
   });
 
   const code = response.getResponseCode();
+  const text = response.getContentText();
   if (code < 200 || code >= 300) {
-    const error = 'Telegram erreur HTTP ' + code + ' : ' + response.getContentText();
+    const error = 'OneSignal erreur HTTP ' + code + ' : ' + text;
     mobileLog_('warning', error);
     return { ok: false, error };
   }
 
-  mobileLog_('info', 'Notification portable envoyée.');
-  return { ok: true };
+  mobileLog_('info', 'Notification portable OneSignal envoyée.');
+  return { ok: true, response: text };
 }
 
-function mobileGetTelegramSettings_() {
-  const props = PropertiesService.getScriptProperties();
-  const token = mobileClean_(props.getProperty('TELEGRAM_BOT_TOKEN'));
-  const chatId = mobileClean_(props.getProperty('TELEGRAM_CHAT_ID'));
-
-  if (!token || !chatId) {
-    return { ok: false, error: 'TELEGRAM_BOT_TOKEN ou TELEGRAM_CHAT_ID absent dans Propriétés du script.' };
+function mobileGetOneSignalSettings_() {
+  const apiKey = mobileClean_(PropertiesService.getScriptProperties().getProperty('ONESIGNAL_REST_API_KEY'));
+  if (!apiKey) {
+    return { ok: false, error: 'ONESIGNAL_REST_API_KEY absent dans Propriétés du script.' };
   }
-
-  return { ok: true, token, chatId };
-}
-
-function mobileTelegramText_(title, lines) {
-  return ['Gestion chambre - ' + title, '']
-    .concat((lines || []).filter(Boolean))
-    .join('\n');
-}
-
-function mobileGetAdminUrl_() {
-  if (typeof getAdminUrl_ === 'function') {
-    return getAdminUrl_();
-  }
-
-  try {
-    const url = ScriptApp.getService().getUrl();
-    if (!url) return '';
-    return url + (url.indexOf('?') === -1 ? '?view=admin' : '&view=admin');
-  } catch (e) {
-    return '';
-  }
+  return { ok: true, apiKey };
 }
 
 function mobileLog_(level, message) {
@@ -234,9 +182,7 @@ function mobileLog_(level, message) {
     if (typeof logAdminNotification_ === 'function') {
       logAdminNotification_('MOBILE_NOTIFICATION', level, '', message);
     }
-  } catch (e) {
-    // Évite qu'une erreur de journalisation bloque la réservation.
-  }
+  } catch (e) {}
 }
 
 function mobileLimitText_(value, maxLength) {
