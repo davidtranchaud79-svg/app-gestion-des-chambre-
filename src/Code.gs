@@ -87,12 +87,13 @@ function createReservation(payload) {
     const stay = normalizeStay_(payload);
     const name = clean_(payload.occupant);
     const phone = clean_(payload.phone);
-    const email = clean_(payload.email);
+    const email = clean_(payload.email).toLowerCase();
     const comment = clean_(payload.comment);
     const requestedRoom = clean_(payload.requestedRoom);
 
     if (!name) throw new Error('Le nom est obligatoire.');
     if (!phone && !email) throw new Error('Ajoute au moins un téléphone ou un email.');
+    if (email && !isValidEmail_(email)) throw new Error('Adresse email invalide.');
 
     const ss = SpreadsheetApp.openById(CONFIG.spreadsheetId);
     const availability = checkAvailability(payload);
@@ -179,6 +180,25 @@ function createReservation(payload) {
     repairRoomStatusFormulas_(ss);
     SpreadsheetApp.flush();
 
+    const receipt = {
+      id: registryId,
+      status: registryStatus,
+      occupant: name,
+      phone,
+      email,
+      room: selected.room,
+      arrival: formatFr_(stay.arrival),
+      departure: formatFr_(stay.departure),
+      nights: stay.nights,
+      nightRate,
+      amount,
+      createdAt: formatDateTimeFr_(createdAt),
+      paymentNotice: 'Montant prévisionnel, validation par la réception.',
+    };
+
+    const mailResult = email ? sendReservationReceiptEmail_(email, receipt) : { ok: false, skipped: true };
+    const emailWarning = email && !mailResult.ok ? mailResult.error : '';
+
     return {
       ok: true,
       id: registryId,
@@ -186,22 +206,14 @@ function createReservation(payload) {
       nights: stay.nights,
       amount,
       status: registryStatus,
-      message: 'Demande enregistrée et intégrée au Registre.',
-      receipt: {
-        id: registryId,
-        status: registryStatus,
-        occupant: name,
-        phone,
-        email,
-        room: selected.room,
-        arrival: formatFr_(stay.arrival),
-        departure: formatFr_(stay.departure),
-        nights: stay.nights,
-        nightRate,
-        amount,
-        createdAt: formatDateTimeFr_(createdAt),
-        paymentNotice: 'Montant prévisionnel, validation par la réception.',
-      },
+      emailSent: Boolean(email && mailResult.ok),
+      emailWarning,
+      message: emailWarning
+        ? 'Demande enregistrée et intégrée au Registre. Reçu affiché, mais email non envoyé : ' + emailWarning
+        : email
+          ? 'Demande enregistrée et intégrée au Registre. Reçu envoyé par email.'
+          : 'Demande enregistrée et intégrée au Registre. Reçu disponible ci-dessous.',
+      receipt,
     };
   } catch (err) {
     return { ok: false, error: err.message || String(err) };
@@ -210,11 +222,91 @@ function createReservation(payload) {
   }
 }
 
+function testMailAuthorization() {
+  const quota = MailApp.getRemainingDailyQuota();
+  return 'MailApp autorisé. Quota restant aujourd’hui : ' + quota;
+}
+
 function repairReservationSystem() {
   const ss = SpreadsheetApp.openById(CONFIG.spreadsheetId);
   refreshRegistryOperationalFlags_(ss);
   repairRoomStatusFormulas_(ss);
   return 'Système réservation recâblé : Registre recalculé et Chambres reliées au Registre complet.';
+}
+
+function sendReservationReceiptEmail_(recipientEmail, receipt) {
+  try {
+    if (!recipientEmail) return { ok: false, skipped: true, error: 'Aucun email renseigné.' };
+    if (!isValidEmail_(recipientEmail)) return { ok: false, error: 'Adresse email invalide.' };
+
+    const subject = 'Reçu de demande de réservation - ' + receipt.id;
+    const htmlBody = receiptEmailHtml_(receipt);
+    const body = plainReceiptText_(receipt);
+
+    MailApp.sendEmail({
+      to: recipientEmail,
+      subject,
+      body,
+      htmlBody,
+      name: 'Gestion chambre',
+    });
+
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, error: err && err.message ? err.message : String(err) };
+  }
+}
+
+function receiptEmailHtml_(receipt) {
+  return [
+    '<div style="font-family:Arial,sans-serif;color:#222;max-width:680px;margin:auto;border:1px solid #ddd;border-radius:8px;padding:18px">',
+    '<h2 style="margin:0 0 8px;color:#5a0d0d">Reçu de demande de réservation</h2>',
+    '<p>Votre demande a bien été enregistrée. La réservation reste soumise à validation par la réception.</p>',
+    '<table style="width:100%;border-collapse:collapse;margin-top:14px">',
+    receiptEmailRow_('Référence', receipt.id),
+    receiptEmailRow_('Statut', receipt.status),
+    receiptEmailRow_('Date de demande', receipt.createdAt),
+    receiptEmailRow_('Demandeur', receipt.occupant),
+    receiptEmailRow_('Téléphone', receipt.phone || '-'),
+    receiptEmailRow_('Email', receipt.email || '-'),
+    receiptEmailRow_('Chambre', receipt.room),
+    receiptEmailRow_('Arrivée', receipt.arrival),
+    receiptEmailRow_('Départ', receipt.departure),
+    receiptEmailRow_('Nombre de nuits', receipt.nights),
+    receiptEmailRow_('Tarif nuit', moneyText_(receipt.nightRate)),
+    receiptEmailRow_('Montant prévisionnel', moneyText_(receipt.amount)),
+    '</table>',
+    '<p style="margin-top:16px;color:#667085">' + escapeHtml_(receipt.paymentNotice || 'Validation par la réception.') + '</p>',
+    '</div>',
+  ].join('');
+}
+
+function receiptEmailRow_(label, value) {
+  return '<tr>' +
+    '<td style="padding:8px;border-bottom:1px solid #eee;color:#667085">' + escapeHtml_(label) + '</td>' +
+    '<td style="padding:8px;border-bottom:1px solid #eee;font-weight:bold;text-align:right">' + escapeHtml_(value) + '</td>' +
+    '</tr>';
+}
+
+function plainReceiptText_(receipt) {
+  return [
+    'Reçu de demande de réservation',
+    '',
+    'Référence : ' + receipt.id,
+    'Statut : ' + receipt.status,
+    'Date de demande : ' + receipt.createdAt,
+    'Demandeur : ' + receipt.occupant,
+    'Téléphone : ' + (receipt.phone || '-'),
+    'Email : ' + (receipt.email || '-'),
+    'Chambre : ' + receipt.room,
+    'Arrivée : ' + receipt.arrival,
+    'Départ : ' + receipt.departure,
+    'Nombre de nuits : ' + receipt.nights,
+    'Tarif nuit : ' + moneyText_(receipt.nightRate),
+    'Montant prévisionnel : ' + moneyText_(receipt.amount),
+    '',
+    receipt.paymentNotice || 'Validation par la réception.',
+  ].join('\n');
 }
 
 function selectAvailableRoom_(rooms, requestedRoom) {
@@ -486,6 +578,23 @@ function financialStatus_(paid, amount) {
   if (paidNumber >= amountNumber) return 'Soldé';
   if (paidNumber > 0) return 'Partiel';
   return 'Impayé';
+}
+
+function isValidEmail_(email) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(clean_(email));
+}
+
+function moneyText_(value) {
+  return Utilities.formatString('%.2f €', Number(value || 0)).replace('.', ',');
+}
+
+function escapeHtml_(value) {
+  return clean_(value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
 }
 
 function isCancelled_(status) {
