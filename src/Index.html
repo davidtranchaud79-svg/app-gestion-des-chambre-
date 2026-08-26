@@ -1,0 +1,269 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <base target="_top">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Gestion chambre</title>
+  <style>
+    body { margin: 0; font-family: Arial, sans-serif; background: #f7f7f7; color: #222; }
+    main { max-width: 880px; margin: auto; padding: 24px; }
+    h1 { margin: 0 0 8px; color: #5a0d0d; }
+    p { color: #667085; }
+    section { background: white; border: 1px solid #ddd; border-radius: 8px; padding: 16px; margin-top: 16px; }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .full { grid-column: 1 / -1; }
+    label { font-weight: 700; font-size: 13px; display: block; margin-bottom: 5px; }
+    input, select, textarea, button { width: 100%; box-sizing: border-box; font: inherit; }
+    input, select, textarea { border: 1px solid #ccc; border-radius: 8px; padding: 10px; }
+    textarea { min-height: 80px; }
+    button { border: 0; border-radius: 8px; padding: 11px; background: #5a0d0d; color: white; font-weight: 700; cursor: pointer; }
+    button.secondary { background: #eee; color: #222; border: 1px solid #ccc; }
+    button:disabled { opacity: .6; cursor: not-allowed; }
+    .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 14px; }
+    .msg { display: none; padding: 12px; border-radius: 8px; margin-top: 12px; }
+    .msg.show { display: block; }
+    .ok { background: #e8f7ee; color: #166534; }
+    .warn { background: #fff7ed; color: #92400e; }
+    .bad { background: #fee2e2; color: #991b1b; }
+    .rooms { display: grid; gap: 10px; }
+    .room { display: flex; justify-content: space-between; gap: 10px; border: 1px solid #ddd; border-radius: 8px; padding: 12px; }
+    .badge { background: #e8f7ee; color: #166534; border-radius: 20px; padding: 5px 9px; font-weight: 700; font-size: 12px; }
+    small { color: #667085; }
+    @media (max-width: 700px) { .grid, .actions { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+<main>
+  <h1>Gestion chambre</h1>
+  <p>Verification des disponibilites en temps reel puis demande de reservation.</p>
+
+  <section>
+    <div class="grid">
+      <div>
+        <label for="arrival">Arrivee</label>
+        <input id="arrival" type="date">
+      </div>
+      <div>
+        <label for="departure">Depart</label>
+        <input id="departure" type="date">
+      </div>
+      <div class="full">
+        <label for="requestedRoom">Chambre souhaitee</label>
+        <select id="requestedRoom">
+          <option value="">Premiere chambre disponible</option>
+        </select>
+      </div>
+      <div>
+        <label for="occupant">Nom du demandeur</label>
+        <input id="occupant" autocomplete="name">
+      </div>
+      <div>
+        <label for="phone">Telephone</label>
+        <input id="phone" autocomplete="tel">
+      </div>
+      <div class="full">
+        <label for="email">Email</label>
+        <input id="email" type="email" autocomplete="email">
+      </div>
+      <div class="full">
+        <label for="comment">Commentaire</label>
+        <textarea id="comment" placeholder="Precision utile pour la reception"></textarea>
+      </div>
+    </div>
+
+    <div class="actions">
+      <button class="secondary" id="checkButton" type="button">Verifier</button>
+      <button id="sendButton" type="button">Envoyer la demande</button>
+    </div>
+
+    <div id="msg" class="msg"></div>
+  </section>
+
+  <section>
+    <h2>Disponibilites</h2>
+    <div id="rooms" class="rooms"></div>
+  </section>
+</main>
+
+<script>
+  const elements = {
+    arrival: document.getElementById('arrival'),
+    departure: document.getElementById('departure'),
+    requestedRoom: document.getElementById('requestedRoom'),
+    occupant: document.getElementById('occupant'),
+    phone: document.getElementById('phone'),
+    email: document.getElementById('email'),
+    comment: document.getElementById('comment'),
+    checkButton: document.getElementById('checkButton'),
+    sendButton: document.getElementById('sendButton'),
+    msg: document.getElementById('msg'),
+    rooms: document.getElementById('rooms'),
+  };
+
+  window.addEventListener('load', init);
+
+  function init() {
+    const today = new Date();
+    const tomorrow = new Date(Date.now() + 86400000);
+
+    elements.arrival.value = iso(today);
+    elements.departure.value = iso(tomorrow);
+    elements.arrival.min = iso(today);
+    elements.departure.min = iso(tomorrow);
+
+    elements.arrival.addEventListener('change', syncDeparture);
+    elements.checkButton.addEventListener('click', checkRooms);
+    elements.sendButton.addEventListener('click', sendRequest);
+
+    checkRooms();
+  }
+
+  function syncDeparture() {
+    const arrival = new Date(elements.arrival.value + 'T00:00:00');
+    const minDeparture = new Date(arrival.getTime() + 86400000);
+    elements.departure.min = iso(minDeparture);
+
+    if (!elements.departure.value || elements.departure.value <= elements.arrival.value) {
+      elements.departure.value = iso(minDeparture);
+    }
+  }
+
+  function payload() {
+    return {
+      arrival: elements.arrival.value,
+      departure: elements.departure.value,
+      requestedRoom: elements.requestedRoom.value,
+      occupant: elements.occupant.value.trim(),
+      phone: elements.phone.value.trim(),
+      email: elements.email.value.trim(),
+      comment: elements.comment.value.trim(),
+    };
+  }
+
+  function checkRooms() {
+    setBusy(true);
+    show('warn', 'Verification en cours...');
+
+    google.script.run
+      .withSuccessHandler((result) => {
+        setBusy(false);
+        if (!result || !result.ok) {
+          renderRooms([]);
+          show('bad', result && result.error ? result.error : 'Erreur de verification.');
+          return;
+        }
+
+        renderRooms(result.rooms || []);
+        fillSelect(result.rooms || []);
+        show('ok', result.availableCount + ' chambre(s) disponible(s) sur ' + result.totalCount + '.');
+      })
+      .withFailureHandler((err) => {
+        setBusy(false);
+        show('bad', err && err.message ? err.message : String(err));
+      })
+      .checkAvailability(payload());
+  }
+
+  function sendRequest() {
+    const data = payload();
+
+    if (!data.occupant) {
+      show('warn', 'Le nom est obligatoire.');
+      return;
+    }
+
+    if (!data.phone && !data.email) {
+      show('warn', 'Ajoute au moins un telephone ou un email.');
+      return;
+    }
+
+    setBusy(true);
+    show('warn', 'Envoi en cours...');
+
+    google.script.run
+      .withSuccessHandler((result) => {
+        setBusy(false);
+        if (!result || !result.ok) {
+          show('bad', result && result.error ? result.error : 'Demande refusee.');
+          return;
+        }
+
+        show('ok', result.message + ' Reference : ' + result.id + '. Chambre : ' + result.room + '.');
+        checkRooms();
+      })
+      .withFailureHandler((err) => {
+        setBusy(false);
+        show('bad', err && err.message ? err.message : String(err));
+      })
+      .createReservation(data);
+  }
+
+  function renderRooms(rooms) {
+    elements.rooms.innerHTML = '';
+
+    if (!rooms.length) {
+      elements.rooms.innerHTML = '<p>Aucune chambre disponible sur cette periode.</p>';
+      return;
+    }
+
+    rooms.forEach((room) => {
+      const div = document.createElement('div');
+      div.className = 'room';
+      div.innerHTML = '<div><strong>' + safe(room.room) + ' - ' + safe(room.type || 'Chambre') + '</strong><br><small>' + money(room.nightRate) + ' / nuit - ' + safe(room.reason || '') + '</small></div><span class="badge">Disponible</span>';
+      elements.rooms.appendChild(div);
+    });
+  }
+
+  function fillSelect(rooms) {
+    const current = elements.requestedRoom.value;
+    elements.requestedRoom.innerHTML = '<option value="">Premiere chambre disponible</option>';
+
+    rooms.forEach((room) => {
+      const option = document.createElement('option');
+      option.value = room.room;
+      option.textContent = room.room + ' - ' + money(room.nightRate) + ' / nuit';
+      elements.requestedRoom.appendChild(option);
+    });
+
+    if ([...elements.requestedRoom.options].some((option) => option.value === current)) {
+      elements.requestedRoom.value = current;
+    }
+  }
+
+  function setBusy(isBusy) {
+    elements.checkButton.disabled = isBusy;
+    elements.sendButton.disabled = isBusy;
+    elements.checkButton.textContent = isBusy ? 'Verification...' : 'Verifier';
+    elements.sendButton.textContent = isBusy ? 'Envoi...' : 'Envoyer la demande';
+  }
+
+  function show(type, text) {
+    elements.msg.className = 'msg show ' + type;
+    elements.msg.textContent = text;
+  }
+
+  function iso(date) {
+    return date.toISOString().slice(0, 10);
+  }
+
+  function money(value) {
+    return new Intl.NumberFormat('fr-FR', {
+      style: 'currency',
+      currency: 'EUR',
+      maximumFractionDigits: 0,
+    }).format(Number(value || 0));
+  }
+
+  function safe(value) {
+    return String(value || '').replace(/[&<>"']/g, (char) => ({
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;',
+      "'": '&#039;',
+    }[char]));
+  }
+</script>
+</body>
+</html>
