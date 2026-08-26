@@ -5,6 +5,8 @@ const CONFIG = {
     rooms: 'Chambres',
     registry: 'Registre',
     requests: 'Reservations_Public',
+    adminNotifications: 'Admin_Notifications',
+    adminAnomalies: 'Anomalies_Reservation',
   },
   roomStartRow: 6,
   registryStartRow: 6,
@@ -13,15 +15,19 @@ const CONFIG = {
   registryCols: 25,
 };
 
-function doGet() {
-  const template = HtmlService.createTemplateFromFile('Index');
+function doGet(e) {
+  const params = (e && e.parameter) || {};
+  const view = norm_(params.view || params.page || '');
+  const isAdmin = view === 'admin';
+  const template = HtmlService.createTemplateFromFile(isAdmin ? 'Admin' : 'Index');
   template.bootstrap = JSON.stringify({
-    title: 'Gestion chambre',
+    title: isAdmin ? 'Administration réservations' : 'Gestion chambre',
     today: toIso_(new Date()),
+    view: isAdmin ? 'admin' : 'public',
   });
 
   return template.evaluate()
-    .setTitle('Gestion chambre')
+    .setTitle(isAdmin ? 'Administration réservations' : 'Gestion chambre')
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }
 
@@ -118,13 +124,13 @@ function createReservation(payload) {
     const channel = email ? 'Mail' : 'Téléphone';
     const nightRate = Number(selected.nightRate || 0);
     const amount = stay.nights * nightRate;
-    const publicStatus = 'Intégrée';
-    const registryStatus = 'Prévu';
+    const publicStatus = 'À valider';
+    const registryStatus = 'À valider';
     const notes = [
       comment,
       'Demande micro-app',
       email ? 'Email : ' + email : '',
-      'Validation automatique Registre',
+      'En attente validation réception',
     ].filter(Boolean).join(' | ');
 
     const requestRow = [
@@ -144,8 +150,8 @@ function createReservation(payload) {
       '',
       'Micro-app',
       comment,
-      'Validée automatiquement',
-      'Oui',
+      'En attente réception',
+      'Non',
       registryId,
       selected.reason || '',
     ];
@@ -198,6 +204,14 @@ function createReservation(payload) {
 
     const mailResult = email ? sendReservationReceiptEmail_(email, receipt) : { ok: false, skipped: true };
     const emailWarning = email && !mailResult.ok ? mailResult.error : '';
+
+    try {
+      notifyAdminNewReservation_(receipt, comment, emailWarning);
+      const anomalies = scanReservationAnomalies_(ss);
+      if (anomalies.length) notifyAdminAnomalies_(anomalies, true);
+    } catch (notifyErr) {
+      logAdminNotification_('ERREUR_NOTIFICATION', 'warning', registryId, notifyErr.message || String(notifyErr));
+    }
 
     return {
       ok: true,
@@ -276,7 +290,7 @@ function receiptEmailHtml_(receipt) {
     receiptEmailRow_('Tarif nuit', moneyText_(receipt.nightRate)),
     receiptEmailRow_('Montant prévisionnel', moneyText_(receipt.amount)),
     '</table>',
-    accessInstructionsHtml_(),
+    shouldShowAccessInstructions_(receipt.status) ? accessInstructionsHtml_() : '',
     '<p style="margin-top:16px;color:#667085">' + escapeHtml_(receipt.paymentNotice || 'Validation par la réception.') + '</p>',
     '</div>',
   ].join('');
@@ -306,7 +320,7 @@ function plainReceiptText_(receipt) {
     'Tarif nuit : ' + moneyText_(receipt.nightRate),
     'Montant prévisionnel : ' + moneyText_(receipt.amount),
     '',
-    accessInstructionsText_(),
+    shouldShowAccessInstructions_(receipt.status) ? accessInstructionsText_() : '',
     '',
     receipt.paymentNotice || 'Validation par la réception.',
   ].filter(function(line) { return line !== null && line !== undefined; }).join('\n');
@@ -348,6 +362,11 @@ function accessInstructionsText_() {
   if (info.badgeNotice) lines.push(info.badgeNotice);
 
   return lines.join('\n');
+}
+
+function shouldShowAccessInstructions_(status) {
+  const normalized = norm_(status);
+  return ['prevu', 'validee', 'en cours'].includes(normalized);
 }
 
 function getAccessInfo_() {

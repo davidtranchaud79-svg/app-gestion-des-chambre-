@@ -1,0 +1,506 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <base target="_top">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Administration réservations</title>
+  <style>
+    :root {
+      --brand: #5a0d0d;
+      --brand-dark: #3f0808;
+      --bg: #f6f7f9;
+      --text: #1f2937;
+      --muted: #667085;
+      --line: #d9dde3;
+      --ok: #166534;
+      --warn: #92400e;
+      --bad: #991b1b;
+    }
+
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: Arial, sans-serif; background: var(--bg); color: var(--text); }
+    main { max-width: 1180px; margin: auto; padding: 22px; }
+    header { display: flex; justify-content: space-between; gap: 16px; align-items: flex-start; margin-bottom: 16px; }
+    h1 { margin: 0 0 6px; color: var(--brand); }
+    h2 { margin: 0 0 12px; font-size: 20px; }
+    p { margin: 0 0 10px; color: var(--muted); }
+    section { background: #fff; border: 1px solid var(--line); border-radius: 8px; padding: 16px; margin-top: 14px; }
+    button, input, textarea { font: inherit; }
+    input, textarea { width: 100%; border: 1px solid #c8ced6; border-radius: 8px; padding: 10px; }
+    button { border: 0; border-radius: 8px; padding: 10px 12px; background: var(--brand); color: #fff; font-weight: 700; cursor: pointer; }
+    button:hover { background: var(--brand-dark); }
+    button.secondary { background: #eef0f3; color: #111827; border: 1px solid #c8ced6; }
+    button.danger { background: var(--bad); }
+    button.small { padding: 7px 9px; font-size: 13px; }
+    button:disabled { opacity: .6; cursor: wait; }
+    label { display: block; margin-bottom: 6px; font-size: 13px; font-weight: 700; }
+    .hidden { display: none !important; }
+    .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+    .login { max-width: 430px; margin: 40px auto 0; }
+    .login-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 12px; }
+    .message { display: none; margin-top: 12px; padding: 10px; border-radius: 8px; }
+    .message.show { display: block; }
+    .message.ok { background: #ecfdf3; color: var(--ok); }
+    .message.warn { background: #fff7ed; color: var(--warn); }
+    .message.bad { background: #fee2e2; color: var(--bad); }
+    .stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+    .stat { border: 1px solid var(--line); border-radius: 8px; padding: 14px; background: #fff; }
+    .stat span { display: block; color: var(--muted); font-size: 13px; }
+    .stat strong { display: block; margin-top: 5px; font-size: 28px; }
+    .layout { display: grid; grid-template-columns: 1.35fr .85fr; gap: 14px; align-items: start; }
+    .table-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; min-width: 760px; }
+    th, td { padding: 9px; border-bottom: 1px solid #eceff3; text-align: left; vertical-align: top; }
+    th { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .03em; }
+    td small { color: var(--muted); }
+    .pill { display: inline-block; border-radius: 999px; padding: 4px 8px; font-size: 12px; font-weight: 700; background: #eef0f3; }
+    .pill.pending { background: #fff7ed; color: var(--warn); }
+    .pill.ok { background: #ecfdf3; color: var(--ok); }
+    .pill.bad { background: #fee2e2; color: var(--bad); }
+    .rooms { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+    .room { border: 1px solid var(--line); border-radius: 8px; padding: 12px; background: #fff; }
+    .room strong { display: block; }
+    .room span { display: inline-block; margin-top: 8px; }
+    .anomaly { border: 1px solid var(--line); border-left: 5px solid var(--warn); border-radius: 8px; padding: 10px; margin-bottom: 8px; background: #fff; }
+    .anomaly.critical { border-left-color: var(--bad); }
+    .anomaly strong { display: block; }
+    .top-actions { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+    .empty { padding: 12px; border: 1px dashed #c8ced6; border-radius: 8px; color: var(--muted); }
+    @media (max-width: 900px) {
+      header, .layout { display: block; }
+      .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .rooms { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .top-actions { justify-content: flex-start; margin-top: 10px; }
+    }
+    @media (max-width: 560px) {
+      main { padding: 14px; }
+      .stats, .rooms, .login-actions { grid-template-columns: 1fr; }
+      table { min-width: 680px; }
+    }
+  </style>
+</head>
+<body>
+<main>
+  <section id="loginPanel" class="login">
+    <h1>Administration réservations</h1>
+    <p>Accès protégé par PIN. Les réservations restent dans le Sheet, le module admin sert à valider, refuser et surveiller les anomalies.</p>
+    <label for="pin">PIN administrateur</label>
+    <input id="pin" type="password" inputmode="numeric" autocomplete="one-time-code">
+    <div class="login-actions">
+      <button id="loginButton" type="button">Entrer</button>
+      <button id="setupButton" class="secondary" type="button">Initialiser</button>
+    </div>
+    <div id="loginMessage" class="message"></div>
+  </section>
+
+  <div id="dashboardPanel" class="hidden">
+    <header>
+      <div>
+        <h1>Dashboard chambres</h1>
+        <p id="generatedAt">Chargement...</p>
+      </div>
+      <div class="top-actions">
+        <button id="notifyButton" class="secondary" type="button">Activer notification écran</button>
+        <button id="refreshButton" class="secondary" type="button">Actualiser</button>
+        <button id="logoutButton" class="danger" type="button">Déconnexion</button>
+      </div>
+    </header>
+
+    <div class="stats">
+      <div class="stat"><span>À valider</span><strong id="statPending">0</strong></div>
+      <div class="stat"><span>Anomalies</span><strong id="statAnomalies">0</strong></div>
+      <div class="stat"><span>Chambres libres</span><strong id="statFree">0</strong></div>
+      <div class="stat"><span>Occupées</span><strong id="statOccupied">0</strong></div>
+    </div>
+
+    <div class="layout">
+      <section>
+        <h2>Réservations à valider</h2>
+        <div id="pendingBox"></div>
+      </section>
+
+      <section>
+        <h2>Alertes</h2>
+        <div id="anomaliesBox"></div>
+      </section>
+    </div>
+
+    <section>
+      <h2>État des chambres</h2>
+      <div id="roomsBox" class="rooms"></div>
+    </section>
+
+    <section>
+      <h2>Historique récent</h2>
+      <div id="historyBox"></div>
+    </section>
+
+    <div id="dashboardMessage" class="message"></div>
+  </div>
+</main>
+
+<script>
+  let adminToken = sessionStorage.getItem('gestionAdminToken') || '';
+  let refreshTimer = null;
+  let previousPending = Number(localStorage.getItem('gestionAdminPending') || 0);
+  let previousAnomalies = Number(localStorage.getItem('gestionAdminAnomalies') || 0);
+
+  const el = {
+    loginPanel: document.getElementById('loginPanel'),
+    dashboardPanel: document.getElementById('dashboardPanel'),
+    pin: document.getElementById('pin'),
+    loginButton: document.getElementById('loginButton'),
+    setupButton: document.getElementById('setupButton'),
+    loginMessage: document.getElementById('loginMessage'),
+    dashboardMessage: document.getElementById('dashboardMessage'),
+    generatedAt: document.getElementById('generatedAt'),
+    statPending: document.getElementById('statPending'),
+    statAnomalies: document.getElementById('statAnomalies'),
+    statFree: document.getElementById('statFree'),
+    statOccupied: document.getElementById('statOccupied'),
+    pendingBox: document.getElementById('pendingBox'),
+    anomaliesBox: document.getElementById('anomaliesBox'),
+    roomsBox: document.getElementById('roomsBox'),
+    historyBox: document.getElementById('historyBox'),
+    refreshButton: document.getElementById('refreshButton'),
+    logoutButton: document.getElementById('logoutButton'),
+    notifyButton: document.getElementById('notifyButton'),
+  };
+
+  window.addEventListener('load', init);
+
+  function init() {
+    el.loginButton.addEventListener('click', login);
+    el.setupButton.addEventListener('click', setup);
+    el.refreshButton.addEventListener('click', loadDashboard);
+    el.logoutButton.addEventListener('click', logout);
+    el.notifyButton.addEventListener('click', requestNotifications);
+    el.pin.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter') login();
+    });
+
+    if (adminToken) {
+      showDashboard();
+      loadDashboard();
+    }
+  }
+
+  function login() {
+    const pin = el.pin.value.trim();
+    if (!pin) {
+      showLoginMessage('warn', 'Saisis le PIN administrateur.');
+      return;
+    }
+
+    setLoginBusy(true);
+    showLoginMessage('warn', 'Connexion...');
+
+    google.script.run
+      .withSuccessHandler((result) => {
+        setLoginBusy(false);
+        if (!result || !result.ok) {
+          showLoginMessage('bad', 'Connexion refusée.');
+          return;
+        }
+        adminToken = result.token;
+        sessionStorage.setItem('gestionAdminToken', adminToken);
+        showDashboard();
+        loadDashboard();
+      })
+      .withFailureHandler((err) => {
+        setLoginBusy(false);
+        showLoginMessage('bad', messageFromError(err));
+      })
+      .adminLogin(pin);
+  }
+
+  function setup() {
+    setLoginBusy(true);
+    showLoginMessage('warn', 'Initialisation...');
+    google.script.run
+      .withSuccessHandler((result) => {
+        setLoginBusy(false);
+        const pinText = result && result.pinConfigured ? 'PIN configuré.' : 'ADMIN_PIN manque encore.';
+        showLoginMessage('ok', (result && result.message ? result.message : 'Initialisé.') + ' ' + pinText);
+      })
+      .withFailureHandler((err) => {
+        setLoginBusy(false);
+        showLoginMessage('bad', messageFromError(err));
+      })
+      .setupAdminModule();
+  }
+
+  function showDashboard() {
+    el.loginPanel.classList.add('hidden');
+    el.dashboardPanel.classList.remove('hidden');
+    if (!refreshTimer) refreshTimer = setInterval(loadDashboard, 60000);
+  }
+
+  function logout() {
+    adminToken = '';
+    sessionStorage.removeItem('gestionAdminToken');
+    if (refreshTimer) clearInterval(refreshTimer);
+    refreshTimer = null;
+    el.dashboardPanel.classList.add('hidden');
+    el.loginPanel.classList.remove('hidden');
+    el.pin.value = '';
+    el.pin.focus();
+  }
+
+  function loadDashboard() {
+    if (!adminToken) return;
+    setDashboardBusy(true);
+
+    google.script.run
+      .withSuccessHandler((result) => {
+        setDashboardBusy(false);
+        if (!result || !result.ok) {
+          showDashboardMessage('bad', 'Dashboard indisponible.');
+          return;
+        }
+        renderDashboard(result);
+      })
+      .withFailureHandler((err) => {
+        setDashboardBusy(false);
+        showDashboardMessage('bad', messageFromError(err));
+        if (messageFromError(err).toLowerCase().includes('expirée')) logout();
+      })
+      .getAdminDashboard(adminToken);
+  }
+
+  function renderDashboard(data) {
+    const stats = data.stats || {};
+    el.generatedAt.textContent = 'Dernière mise à jour : ' + (data.generatedAt || '');
+    el.statPending.textContent = stats.pending || 0;
+    el.statAnomalies.textContent = stats.anomalies || 0;
+    el.statFree.textContent = (stats.roomsFree || 0) + ' / ' + (stats.roomsTotal || 0);
+    el.statOccupied.textContent = stats.roomsOccupied || 0;
+
+    renderPending(data.pending || []);
+    renderAnomalies(data.anomalies || []);
+    renderRooms(data.rooms || []);
+    renderHistory(data.requests || []);
+    notifyIfNeeded(stats.pending || 0, stats.anomalies || 0);
+    showDashboardMessage('ok', 'Dashboard actualisé.');
+  }
+
+  function renderPending(items) {
+    if (!items.length) {
+      el.pendingBox.innerHTML = '<div class="empty">Aucune réservation à valider.</div>';
+      return;
+    }
+
+    el.pendingBox.innerHTML = `
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Référence</th><th>Demandeur</th><th>Séjour</th><th>Chambre</th><th>Montant</th><th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${items.map((item) => `
+              <tr>
+                <td><strong>${safe(item.id)}</strong><br><small>${safe(item.createdAt)}</small></td>
+                <td>${safe(item.occupant)}<br><small>${safe(item.phone || '-')} · ${safe(item.email || '-')}</small></td>
+                <td>${safe(item.arrival)} au ${safe(item.departure)}<br><small>${safe(item.nights)} nuit(s)</small></td>
+                <td>${safe(item.room)}</td>
+                <td>${money(item.amount)}</td>
+                <td>
+                  <button class="small approve" data-id="${safeAttr(item.id)}" type="button">Valider</button>
+                  <button class="small danger reject" data-id="${safeAttr(item.id)}" type="button">Refuser</button>
+                </td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+    `;
+
+    el.pendingBox.querySelectorAll('.approve').forEach((button) => {
+      button.addEventListener('click', () => approve(button.dataset.id));
+    });
+    el.pendingBox.querySelectorAll('.reject').forEach((button) => {
+      button.addEventListener('click', () => reject(button.dataset.id));
+    });
+  }
+
+  function renderAnomalies(items) {
+    if (!items.length) {
+      el.anomaliesBox.innerHTML = '<div class="empty">Aucune anomalie détectée.</div>';
+      return;
+    }
+
+    el.anomaliesBox.innerHTML = items.map((item) => `
+      <div class="anomaly ${safeAttr(item.level)}">
+        <strong>${safe(item.type)} · ${safe(item.level)}</strong>
+        <div>${safe(item.message)}</div>
+        <small>${safe(item.reference || '-')} · ${safe(item.room || '-')}</small>
+      </div>
+    `).join('');
+  }
+
+  function renderRooms(items) {
+    if (!items.length) {
+      el.roomsBox.innerHTML = '<div class="empty">Aucune chambre trouvée.</div>';
+      return;
+    }
+
+    el.roomsBox.innerHTML = items.map((room) => `
+      <div class="room">
+        <strong>${safe(room.room)} · ${safe(room.type || 'Chambre')}</strong>
+        <small>${safe(room.occupant || 'Aucun occupant actif')}</small>
+        <span class="pill ${statusClass(room.status)}">${safe(room.status)}</span>
+        ${room.movement ? `<span class="pill pending">${safe(room.movement)}</span>` : ''}
+      </div>
+    `).join('');
+  }
+
+  function renderHistory(items) {
+    if (!items.length) {
+      el.historyBox.innerHTML = '<div class="empty">Aucune demande récente.</div>';
+      return;
+    }
+
+    el.historyBox.innerHTML = `
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Référence</th><th>Statut</th><th>Demandeur</th><th>Séjour</th><th>Chambre</th><th>Décision</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${items.map((item) => `
+              <tr>
+                <td><strong>${safe(item.id)}</strong><br><small>${safe(item.createdAt)}</small></td>
+                <td><span class="pill ${statusClass(item.status)}">${safe(item.status)}</span></td>
+                <td>${safe(item.occupant)}<br><small>${safe(item.phone || '-')} · ${safe(item.email || '-')}</small></td>
+                <td>${safe(item.arrival)} au ${safe(item.departure)}</td>
+                <td>${safe(item.room)}</td>
+                <td><small>${safe(item.adminDecision || '-')}</small></td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+    `;
+  }
+
+  function approve(reference) {
+    const note = prompt('Note optionnelle pour la validation :') || '';
+    setDashboardBusy(true);
+    showDashboardMessage('warn', 'Validation en cours...');
+    google.script.run
+      .withSuccessHandler(afterDecision)
+      .withFailureHandler((err) => {
+        setDashboardBusy(false);
+        showDashboardMessage('bad', messageFromError(err));
+      })
+      .adminApproveReservation(adminToken, reference, note);
+  }
+
+  function reject(reference) {
+    const note = prompt('Motif du refus, optionnel mais recommandé :') || '';
+    setDashboardBusy(true);
+    showDashboardMessage('warn', 'Refus en cours...');
+    google.script.run
+      .withSuccessHandler(afterDecision)
+      .withFailureHandler((err) => {
+        setDashboardBusy(false);
+        showDashboardMessage('bad', messageFromError(err));
+      })
+      .adminRejectReservation(adminToken, reference, note);
+  }
+
+  function afterDecision(result) {
+    setDashboardBusy(false);
+    if (!result || !result.ok) {
+      showDashboardMessage('bad', result && result.error ? result.error : 'Action refusée.');
+      return;
+    }
+    showDashboardMessage(result.emailWarning ? 'warn' : 'ok', result.message + (result.emailWarning ? ' ' + result.emailWarning : ''));
+    loadDashboard();
+  }
+
+  function requestNotifications() {
+    if (!('Notification' in window)) {
+      showDashboardMessage('warn', 'Notification écran non supportée par ce navigateur.');
+      return;
+    }
+    Notification.requestPermission().then((permission) => {
+      showDashboardMessage(permission === 'granted' ? 'ok' : 'warn', permission === 'granted' ? 'Notification écran activée.' : 'Notification écran refusée.');
+    });
+  }
+
+  function notifyIfNeeded(pending, anomalies) {
+    if ('Notification' in window && Notification.permission === 'granted') {
+      if (pending > previousPending) {
+        new Notification('Nouvelle réservation à valider', { body: pending + ' demande(s) en attente.' });
+      }
+      if (anomalies > previousAnomalies) {
+        new Notification('Anomalie réservation détectée', { body: anomalies + ' anomalie(s) à vérifier.' });
+      }
+    }
+    previousPending = pending;
+    previousAnomalies = anomalies;
+    localStorage.setItem('gestionAdminPending', pending);
+    localStorage.setItem('gestionAdminAnomalies', anomalies);
+  }
+
+  function setLoginBusy(isBusy) {
+    el.loginButton.disabled = isBusy;
+    el.setupButton.disabled = isBusy;
+  }
+
+  function setDashboardBusy(isBusy) {
+    el.refreshButton.disabled = isBusy;
+  }
+
+  function showLoginMessage(type, text) {
+    el.loginMessage.className = 'message show ' + type;
+    el.loginMessage.textContent = text;
+  }
+
+  function showDashboardMessage(type, text) {
+    el.dashboardMessage.className = 'message show ' + type;
+    el.dashboardMessage.textContent = text;
+  }
+
+  function statusClass(status) {
+    const normalized = String(status || '').toLowerCase();
+    if (normalized.includes('valid') || normalized.includes('libre')) return 'ok';
+    if (normalized.includes('refus') || normalized.includes('anomal') || normalized.includes('ferm')) return 'bad';
+    if (normalized.includes('attente') || normalized.includes('valider') || normalized.includes('rotation')) return 'pending';
+    return '';
+  }
+
+  function money(value) {
+    return new Intl.NumberFormat('fr-FR', {
+      style: 'currency',
+      currency: 'EUR',
+      maximumFractionDigits: 0,
+    }).format(Number(value || 0));
+  }
+
+  function messageFromError(err) {
+    return err && err.message ? err.message : String(err || 'Erreur inconnue');
+  }
+
+  function safe(value) {
+    return String(value || '').replace(/[&<>"']/g, (char) => ({
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;',
+      "'": '&#039;',
+    }[char]));
+  }
+
+  function safeAttr(value) {
+    return safe(value).replace(/`/g, '&#096;');
+  }
+</script>
+</body>
+</html>
