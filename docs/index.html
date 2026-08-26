@@ -4,16 +4,16 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>La Cayenne de Paris - Réservation chambre</title>
-  <meta name="description" content="Accès direct au formulaire de réservation de chambre de La Cayenne de Paris.">
+  <meta name="description" content="Réserver une chambre à La Cayenne de Paris.">
   <style>
     :root {
-      --bordeaux: #6f1d1b;
-      --bordeaux-dark: #4f1211;
-      --gold: #d8ad68;
-      --cream: #f8f3ed;
-      --ink: #2f2723;
-      --muted: #6b5f59;
-      --line: #eadfd3;
+      --bordeaux: #681a1c;
+      --bordeaux-dark: #3f0f11;
+      --gold: #c89b5d;
+      --cream: #f7efe5;
+      --paper: #fffaf3;
+      --ink: #271f1b;
+      --muted: #74655d;
     }
 
     * {
@@ -24,172 +24,151 @@
       margin: 0;
       min-height: 100vh;
       font-family: Arial, Helvetica, sans-serif;
-      background: linear-gradient(180deg, #fbf7f1 0%, #f1e7dc 100%);
       color: var(--ink);
+      background:
+        linear-gradient(135deg, rgba(255,255,255,.08) 0 25%, transparent 25% 50%, rgba(255,255,255,.06) 50% 75%, transparent 75%) 0 0 / 36px 36px,
+        linear-gradient(160deg, var(--bordeaux-dark), var(--bordeaux));
     }
 
     main {
-      width: min(920px, 100%);
-      margin: 0 auto;
-      padding: 32px 18px;
-    }
-
-    .hero {
+      min-height: 100vh;
       display: grid;
-      grid-template-columns: 260px 1fr;
-      gap: 28px;
-      align-items: center;
-      min-height: calc(100vh - 64px);
+      place-items: center;
+      padding: 22px;
     }
 
-    .logo-card {
-      display: flex;
-      justify-content: center;
+    .panel {
+      width: min(760px, 100%);
+      display: grid;
+      grid-template-columns: 250px 1fr;
+      gap: 30px;
       align-items: center;
-      padding: 18px;
-      border: 1px solid var(--line);
-      border-radius: 14px;
-      background: rgba(255, 255, 255, 0.78);
-      box-shadow: 0 18px 50px rgba(79, 18, 17, 0.12);
+      padding: 34px;
+      border: 1px solid rgba(255, 255, 255, .55);
+      border-radius: 8px;
+      background: var(--paper);
+      box-shadow: 0 24px 70px rgba(0, 0, 0, .28);
+    }
+
+    .mark {
+      display: grid;
+      place-items: center;
+      padding: 12px;
+      border-right: 1px solid #eadccc;
+    }
+
+    .logo {
+      width: min(230px, 100%);
+      height: auto;
+      display: block;
     }
 
     .content {
-      padding: 8px 0;
+      min-width: 0;
     }
 
-    .eyebrow {
+    .kicker {
       margin: 0 0 10px;
-      color: var(--bordeaux);
-      font-size: 14px;
-      font-weight: 700;
-      letter-spacing: 0.04em;
+      color: var(--gold);
+      font-size: 13px;
+      font-weight: 800;
+      letter-spacing: .09em;
       text-transform: uppercase;
     }
 
     h1 {
       margin: 0;
-      max-width: 620px;
       color: var(--bordeaux-dark);
-      font-size: clamp(34px, 6vw, 58px);
-      line-height: 1.02;
+      font-size: clamp(34px, 6vw, 56px);
+      line-height: 1;
     }
 
     .lead {
       margin: 18px 0 0;
-      max-width: 580px;
+      max-width: 440px;
       color: var(--muted);
       font-size: 18px;
-      line-height: 1.55;
+      line-height: 1.5;
     }
 
-    .actions {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 12px;
-      margin-top: 26px;
-      align-items: center;
-    }
-
-    .button {
+    .cta {
       display: inline-flex;
-      min-height: 48px;
+      min-height: 52px;
       align-items: center;
       justify-content: center;
-      padding: 0 22px;
-      border-radius: 999px;
+      margin-top: 26px;
+      padding: 0 24px;
+      border-radius: 6px;
       background: var(--bordeaux);
       color: #fff;
       font-weight: 800;
       text-decoration: none;
-      box-shadow: 0 12px 26px rgba(111, 29, 27, 0.22);
+      box-shadow: 0 12px 24px rgba(104, 26, 28, .22);
     }
 
-    .button:hover {
+    .cta:hover {
       background: var(--bordeaux-dark);
     }
 
-    .link-text {
-      overflow-wrap: anywhere;
-      color: var(--bordeaux-dark);
-      font-size: 13px;
-      line-height: 1.4;
-    }
-
-    .note {
-      margin-top: 24px;
-      padding: 14px 16px;
-      border-left: 4px solid var(--gold);
-      background: rgba(255, 255, 255, 0.7);
+    .small {
+      margin: 18px 0 0;
       color: var(--muted);
-      font-size: 15px;
+      font-size: 13px;
       line-height: 1.45;
     }
 
-    svg {
-      width: 100%;
-      height: auto;
-      display: block;
+    .small a {
+      color: var(--bordeaux);
+      font-weight: 700;
     }
 
     @media (max-width: 720px) {
-      .hero {
+      .panel {
         grid-template-columns: 1fr;
         gap: 22px;
-        min-height: auto;
-      }
-
-      .logo-card {
-        width: min(260px, 100%);
-        margin: 0 auto;
-      }
-
-      .content {
+        padding: 24px 20px 28px;
         text-align: center;
       }
 
-      .lead,
-      .note {
-        margin-left: auto;
-        margin-right: auto;
+      .mark {
+        border-right: 0;
+        border-bottom: 1px solid #eadccc;
+        padding-bottom: 18px;
       }
 
-      .actions {
-        justify-content: center;
+      .lead {
+        margin-left: auto;
+        margin-right: auto;
       }
     }
   </style>
 </head>
 <body>
   <main>
-    <section class="hero" aria-label="Réservation de chambre La Cayenne de Paris">
-      <div class="logo-card" aria-hidden="true">
-        <svg viewBox="0 0 360 360" role="img" aria-label="Logo La Cayenne de Paris avec lit">
-          <rect width="360" height="360" rx="28" fill="#f8f3ed"/>
-          <circle cx="180" cy="116" r="74" fill="#6f1d1b"/>
-          <path d="M107 101c0-8 6-14 14-14h118c8 0 14 6 14 14v82H107v-82z" fill="#fff"/>
-          <rect x="122" y="111" width="48" height="36" rx="9" fill="#f8f3ed"/>
-          <rect x="180" y="111" width="58" height="36" rx="9" fill="#f8f3ed"/>
-          <rect x="96" y="170" width="168" height="24" rx="10" fill="#d8ad68"/>
-          <rect x="96" y="98" width="12" height="101" rx="5" fill="#312622"/>
-          <path d="M92 211h176" stroke="#6f1d1b" stroke-width="8" stroke-linecap="round"/>
-          <text x="180" y="246" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="28" font-weight="800" fill="#312622">La Cayenne</text>
-          <text x="180" y="276" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="24" font-weight="800" fill="#312622">de Paris</text>
-          <rect x="61" y="296" width="238" height="40" rx="20" fill="#6f1d1b"/>
-          <text x="180" y="322" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="15" font-weight="800" fill="#fff">Réserver une chambre</text>
+    <section class="panel" aria-label="Réservation de chambre La Cayenne de Paris">
+      <div class="mark">
+        <svg class="logo" viewBox="0 0 320 320" role="img" aria-label="La Cayenne de Paris, réservation chambre">
+          <rect x="18" y="18" width="284" height="284" rx="8" fill="#fffaf3" stroke="#c89b5d" stroke-width="6"/>
+          <circle cx="160" cy="126" r="86" fill="#681a1c"/>
+          <circle cx="160" cy="126" r="70" fill="#fffaf3"/>
+          <text x="160" y="155" text-anchor="middle" font-family="Georgia, serif" font-size="118" font-weight="700" fill="#681a1c" opacity=".08">C</text>
+          <path d="M94 143V94c0-6 5-11 11-11h110c6 0 11 5 11 11v49" fill="none" stroke="#681a1c" stroke-width="9" stroke-linecap="round"/>
+          <rect x="108" y="104" width="43" height="32" rx="7" fill="#efe2d1" stroke="#681a1c" stroke-width="5"/>
+          <rect x="163" y="104" width="49" height="32" rx="7" fill="#efe2d1" stroke="#681a1c" stroke-width="5"/>
+          <path d="M84 154h152" stroke="#681a1c" stroke-width="12" stroke-linecap="round"/>
+          <path d="M88 171h144" stroke="#c89b5d" stroke-width="9" stroke-linecap="round"/>
+          <path d="M98 154v35M222 154v35" stroke="#681a1c" stroke-width="8" stroke-linecap="round"/>
+          <text x="160" y="238" text-anchor="middle" font-family="Georgia, serif" font-size="31" font-weight="700" fill="#271f1b">La Cayenne</text>
+          <text x="160" y="270" text-anchor="middle" font-family="Georgia, serif" font-size="25" font-weight="700" fill="#271f1b">de Paris</text>
         </svg>
       </div>
 
       <div class="content">
-        <p class="eyebrow">Gestion des chambres</p>
-        <h1>La Cayenne de Paris</h1>
-        <p class="lead">Accès direct au formulaire de réservation. Le formulaire vérifie les disponibilités et transmet la demande à la réception.</p>
-
-        <div class="actions">
-          <a class="button" href="https://script.google.com/macros/s/AKfycbybIF7v0Mz5Jah8Z9pxLPL37_kXKdSMsIqz_4Q3ZxRzJ6fxLD6iofUPnXB-ItTTNy69OA/exec" target="_blank" rel="noopener">Ouvrir la réservation</a>
-          <span class="link-text">https://script.google.com/macros/s/AKfycbybIF7v0Mz5Jah8Z9pxLPL37_kXKdSMsIqz_4Q3ZxRzJ6fxLD6iofUPnXB-ItTTNy69OA/exec</span>
-        </div>
-
-        <p class="note">Cette page GitHub sert de porte d’entrée. La vraie application reste l’application web Google Apps Script, car elle est reliée au Google Sheet de réservation.</p>
+        <p class="kicker">Gestion des chambres</p>
+        <h1>Réserver une chambre</h1>
+        <p class="lead">Vérifiez les disponibilités et envoyez votre demande directement à la réception.</p>
+        <a class="cta" href="https://script.google.com/macros/s/AKfycbybIF7v0Mz5Jah8Z9pxLPL37_kXKdSMsIqz_4Q3ZxRzJ6fxLD6iofUPnXB-ItTTNy69OA/exec" target="_blank" rel="noopener">Accéder au formulaire</a>
+        <p class="small">Lien officiel : <a href="https://script.google.com/macros/s/AKfycbybIF7v0Mz5Jah8Z9pxLPL37_kXKdSMsIqz_4Q3ZxRzJ6fxLD6iofUPnXB-ItTTNy69OA/exec" target="_blank" rel="noopener">ouvrir la réservation</a></p>
       </div>
     </section>
   </main>
