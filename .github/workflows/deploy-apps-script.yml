@@ -40,9 +40,7 @@ jobs:
       - name: Configure clasp
         if: steps.secrets.outputs.ready == 'true'
         run: |
-          cat > ~/.clasprc.json <<'JSON'
-          $CLASP_CREDENTIALS
-          JSON
+          printf '%s' "$CLASP_CREDENTIALS" > ~/.clasprc.json
           cat > .clasp.json <<JSON
           {
             "scriptId": "$CLASP_SCRIPT_ID",
