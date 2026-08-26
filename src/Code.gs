@@ -10,6 +10,7 @@ const CONFIG = {
   registryStartRow: 6,
   requestStartRow: 2,
   requestCols: 20,
+  registryCols: 25,
 };
 
 function doGet() {
@@ -97,31 +98,38 @@ function createReservation(payload) {
     const availability = checkAvailability(payload);
     if (!availability.ok) return availability;
 
-    let selected = null;
-
-    if (requestedRoom) {
-      selected = availability.rooms.find((room) => room.room === requestedRoom);
-      if (!selected) {
-        return { ok: false, error: 'Cette chambre vient de devenir indisponible.' };
-      }
-    } else {
-      selected = availability.rooms[0];
-    }
-
+    const selected = selectAvailableRoom_(availability.rooms, requestedRoom);
     if (!selected) {
       return { ok: false, error: 'Aucune chambre disponible sur cette période.' };
     }
 
-    const id = createReservationId_();
-    const amount = stay.nights * Number(selected.nightRate || 0);
-    const status = 'En attente';
-    const createdAt = new Date();
-    const contactChannel = email ? 'Mail' : 'Téléphone';
+    const registrySheet = ss.getSheetByName(CONFIG.sheets.registry);
+    const requestSheet = ss.getSheetByName(CONFIG.sheets.requests);
+    if (!registrySheet) throw new Error('Onglet Registre introuvable.');
+    if (!requestSheet) throw new Error('Onglet Reservations_Public introuvable.');
 
-    const row = [
-      id,
+    if (hasRegistryDuplicate_(registrySheet, selected.room, name, stay.arrival, stay.departure)) {
+      return { ok: false, error: 'Cette demande existe déjà dans le Registre.' };
+    }
+
+    const registryId = createRegistryId_();
+    const createdAt = new Date();
+    const channel = email ? 'Mail' : 'Téléphone';
+    const nightRate = Number(selected.nightRate || 0);
+    const amount = stay.nights * nightRate;
+    const publicStatus = 'Intégrée';
+    const registryStatus = 'Prévu';
+    const notes = [
+      comment,
+      'Demande micro-app',
+      email ? 'Email : ' + email : '',
+      'Validation automatique Registre',
+    ].filter(Boolean).join(' | ');
+
+    const requestRow = [
+      registryId,
       createdAt,
-      status,
+      publicStatus,
       requestedRoom || '',
       selected.room,
       name,
@@ -130,34 +138,58 @@ function createReservation(payload) {
       stay.arrival,
       stay.departure,
       stay.nights,
-      selected.nightRate || '',
+      nightRate,
       amount,
       '',
       'Micro-app',
       comment,
-      'À valider réception',
-      contactChannel,
-      '',
+      'Validée automatiquement',
+      'Oui',
+      registryId,
       selected.reason || '',
     ];
 
-    const sheet = ss.getSheetByName(CONFIG.sheets.requests);
-    if (!sheet) throw new Error('Onglet Reservations_Public introuvable.');
+    const registryRow = buildRegistryRow_({
+      id: registryId,
+      segment: 'Court séjour',
+      room: selected.room,
+      occupant: name,
+      organisme: '',
+      phone,
+      arrival: stay.arrival,
+      departure: stay.departure,
+      unit: 'Nuit',
+      quantity: stay.nights,
+      unitRate: nightRate,
+      amount,
+      paid: 0,
+      status: registryStatus,
+      channel,
+      notes,
+      createdAt,
+    });
 
-    const targetRow = firstEmptyRow_(sheet, CONFIG.requestStartRow, 1);
-    sheet.getRange(targetRow, 1, 1, CONFIG.requestCols).setValues([row]);
+    const requestTargetRow = firstEmptyRow_(requestSheet, CONFIG.requestStartRow, 1);
+    requestSheet.getRange(requestTargetRow, 1, 1, CONFIG.requestCols).setValues([requestRow]);
+
+    const registryTargetRow = firstEmptyRow_(registrySheet, CONFIG.registryStartRow, 1);
+    registrySheet.getRange(registryTargetRow, 1, 1, CONFIG.registryCols).setValues([registryRow]);
+
+    refreshRegistryOperationalFlags_(ss);
+    repairRoomStatusFormulas_(ss);
+    SpreadsheetApp.flush();
 
     return {
       ok: true,
-      id,
+      id: registryId,
       room: selected.room,
       nights: stay.nights,
       amount,
-      status,
-      message: 'Demande envoyée. La réception doit valider.',
+      status: registryStatus,
+      message: 'Demande enregistrée et intégrée au Registre.',
       receipt: {
-        id,
-        status,
+        id: registryId,
+        status: registryStatus,
         occupant: name,
         phone,
         email,
@@ -165,7 +197,7 @@ function createReservation(payload) {
         arrival: formatFr_(stay.arrival),
         departure: formatFr_(stay.departure),
         nights: stay.nights,
-        nightRate: Number(selected.nightRate || 0),
+        nightRate,
         amount,
         createdAt: formatDateTimeFr_(createdAt),
         paymentNotice: 'Montant prévisionnel, validation par la réception.',
@@ -176,6 +208,145 @@ function createReservation(payload) {
   } finally {
     lock.releaseLock();
   }
+}
+
+function repairReservationSystem() {
+  const ss = SpreadsheetApp.openById(CONFIG.spreadsheetId);
+  refreshRegistryOperationalFlags_(ss);
+  repairRoomStatusFormulas_(ss);
+  return 'Système réservation recâblé : Registre recalculé et Chambres reliées au Registre complet.';
+}
+
+function selectAvailableRoom_(rooms, requestedRoom) {
+  if (!rooms || !rooms.length) return null;
+  if (!requestedRoom) return rooms[0];
+  return rooms.find((room) => room.room === requestedRoom) || null;
+}
+
+function buildRegistryRow_(data) {
+  const today = today_();
+  const activeToday = !isCancelled_(data.status) && today >= data.arrival && today < data.departure;
+  const balance = Number(data.amount || 0) - Number(data.paid || 0);
+
+  return [
+    data.id,
+    data.segment,
+    data.room,
+    data.occupant,
+    data.organisme || '',
+    data.phone || '',
+    data.arrival,
+    data.departure,
+    data.unit,
+    data.quantity,
+    data.unitRate,
+    data.amount,
+    data.paid,
+    balance,
+    data.status,
+    '',
+    '',
+    data.channel,
+    data.notes || '',
+    activeToday ? 'Oui' : 'Non',
+    exploitationStatus_(today, data.arrival, data.departure, data.status, '', ''),
+    '',
+    movementOfDay_(today, data.arrival, data.departure),
+    financialStatus_(data.paid, data.amount),
+    data.createdAt || new Date(),
+  ];
+}
+
+function refreshRegistryOperationalFlags_(ss) {
+  const sheet = ss.getSheetByName(CONFIG.sheets.registry);
+  if (!sheet) return;
+
+  const last = sheet.getLastRow();
+  if (last < CONFIG.registryStartRow) return;
+
+  const count = last - CONFIG.registryStartRow + 1;
+  const data = sheet.getRange(CONFIG.registryStartRow, 1, count, CONFIG.registryCols).getValues();
+  const today = today_();
+  const roomItems = {};
+
+  const output = data.map((row, index) => {
+    const id = clean_(row[0]);
+    const room = clean_(row[2]);
+    const arrival = toDate_(row[6]);
+    const departure = toDate_(row[7]);
+    const status = clean_(row[14]);
+    const checkIn = row[15];
+    const checkOut = row[16];
+
+    if (!id || !room || !arrival || !departure) return ['', '', '', '', ''];
+
+    const active = !isCancelled_(status) && today >= arrival && today < departure;
+    if (!isCancelled_(status)) {
+      if (!roomItems[room]) roomItems[room] = [];
+      roomItems[room].push({ index, arrival, departure });
+    }
+
+    return [
+      active ? 'Oui' : 'Non',
+      exploitationStatus_(today, arrival, departure, status, checkIn, checkOut),
+      '',
+      movementOfDay_(today, arrival, departure),
+      financialStatus_(row[12], row[11]),
+    ];
+  });
+
+  Object.keys(roomItems).forEach((room) => {
+    const items = roomItems[room].sort((a, b) => a.arrival - b.arrival);
+    for (let i = 0; i < items.length; i++) {
+      for (let j = i + 1; j < items.length; j++) {
+        if (items[j].arrival >= items[i].departure) break;
+        if (items[j].arrival < items[i].departure && items[j].departure > items[i].arrival) {
+          output[items[i].index][2] = 'Chevauchement';
+          output[items[j].index][2] = 'Chevauchement';
+        }
+      }
+    }
+  });
+
+  sheet.getRange(CONFIG.registryStartRow, 20, count, 5).setValues(output);
+}
+
+function repairRoomStatusFormulas_(ss) {
+  const sheet = ss.getSheetByName(CONFIG.sheets.rooms);
+  if (!sheet) return;
+
+  const last = sheet.getLastRow();
+  if (last < CONFIG.roomStartRow) return;
+
+  for (let row = CONFIG.roomStartRow; row <= last; row++) {
+    const roomCell = '$A' + row;
+    const manualCell = '$H' + row;
+    sheet.getRange(row, 9).setFormula(
+      '=IF(' + roomCell + '="","",IF(COUNTIFS(Registre!$C:$C,' + roomCell + ',Registre!$B:$B,"Résident",Registre!$G:$G,"<="&TODAY(),Registre!$H:$H,">"&TODAY(),Registre!$O:$O,"<>Annulé",Registre!$O:$O,"<>No-show")>0,"Résident",IF(COUNTIFS(Registre!$C:$C,' + roomCell + ',Registre!$B:$B,"Court séjour",Registre!$G:$G,"<="&TODAY(),Registre!$H:$H,">"&TODAY(),Registre!$O:$O,"<>Annulé",Registre!$O:$O,"<>No-show")>0,"Court séjour","")))'
+    );
+    sheet.getRange(row, 10).setFormula(
+      '=IF(' + roomCell + '="","",IF(' + manualCell + '="Hors service","Hors service",IF(AND(COUNTIFS(Registre!$C:$C,' + roomCell + ',Registre!$G:$G,TODAY(),Registre!$O:$O,"<>Annulé",Registre!$O:$O,"<>No-show")>0,COUNTIFS(Registre!$C:$C,' + roomCell + ',Registre!$H:$H,TODAY(),Registre!$O:$O,"<>Annulé",Registre!$O:$O,"<>No-show")>0),"Rotation du jour",IF(COUNTIFS(Registre!$C:$C,' + roomCell + ',Registre!$G:$G,TODAY(),Registre!$O:$O,"<>Annulé",Registre!$O:$O,"<>No-show")>0,"Arrivée du jour",IF(COUNTIFS(Registre!$C:$C,' + roomCell + ',Registre!$H:$H,TODAY(),Registre!$O:$O,"<>Annulé",Registre!$O:$O,"<>No-show")>0,"Départ du jour",IF(COUNTIFS(Registre!$C:$C,' + roomCell + ',Registre!$G:$G,"<="&TODAY(),Registre!$H:$H,">"&TODAY(),Registre!$O:$O,"<>Annulé",Registre!$O:$O,"<>No-show")>0,"Occupée","Libre"))))))'
+    );
+    sheet.getRange(row, 11).setFormula(
+      '=IF(' + roomCell + '="","",IF(J' + row + '="Libre","Attribuer",IF(J' + row + '="Arrivée du jour","Préparer accueil",IF(J' + row + '="Départ du jour","Contrôler départ",IF(J' + row + '="Rotation du jour","Nettoyage + accueil",IF(J' + row + '="Hors service","Maintenance","Suivi"))))))'
+    );
+  }
+}
+
+function hasRegistryDuplicate_(sheet, room, occupant, arrival, departure) {
+  const last = sheet.getLastRow();
+  if (last < CONFIG.registryStartRow) return false;
+
+  const data = sheet.getRange(CONFIG.registryStartRow, 1, last - CONFIG.registryStartRow + 1, CONFIG.registryCols).getValues();
+  const key = [norm_(room), norm_(occupant), arrival.getTime(), departure.getTime()].join('|');
+
+  return data.some((row) => {
+    const rowArrival = toDate_(row[6]);
+    const rowDeparture = toDate_(row[7]);
+    if (!rowArrival || !rowDeparture || isCancelled_(row[14])) return false;
+    const rowKey = [norm_(row[2]), norm_(row[3]), rowArrival.getTime(), rowDeparture.getTime()].join('|');
+    return rowKey === key;
+  });
 }
 
 function getRooms_(ss) {
@@ -207,7 +378,7 @@ function getRegistry_(ss) {
   const last = sheet.getLastRow();
   if (last < CONFIG.registryStartRow) return [];
 
-  return sheet.getRange(CONFIG.registryStartRow, 1, last - CONFIG.registryStartRow + 1, 15)
+  return sheet.getRange(CONFIG.registryStartRow, 1, last - CONFIG.registryStartRow + 1, CONFIG.registryCols)
     .getValues()
     .map((row) => ({
       room: clean_(row[2]),
@@ -283,14 +454,51 @@ function firstEmptyRow_(sheet, startRow, col) {
   return maxRows + 1;
 }
 
-function createReservationId_() {
+function createRegistryId_() {
   const stamp = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyyMMdd-HHmmss');
-  const rand = Math.floor(Math.random() * 9000 + 1000);
-  return 'RES-' + stamp + '-' + rand;
+  const rand = Math.floor(Math.random() * 900 + 100);
+  return 'FJT-' + stamp + '-' + rand;
+}
+
+function exploitationStatus_(today, arrival, departure, status, checkIn, checkOut) {
+  const normalized = norm_(status);
+  if (normalized === 'prevu' && arrival < today && !checkIn) return 'Arrivée dépassée';
+  if (normalized === 'en cours' && departure < today && !checkOut) return 'Départ dépassé';
+  if (normalized === 'parti' && !checkOut) return 'Sortie à régulariser';
+  if (normalized === 'en cours') return 'Occupé';
+  if (normalized === 'prevu') return 'À venir';
+  return status || '';
+}
+
+function movementOfDay_(today, arrival, departure) {
+  const isArrival = sameDate_(today, arrival);
+  const isDeparture = sameDate_(today, departure);
+  if (isArrival && isDeparture) return 'Rotation du jour';
+  if (isArrival) return 'Arrivée du jour';
+  if (isDeparture) return 'Départ du jour';
+  return '';
+}
+
+function financialStatus_(paid, amount) {
+  const paidNumber = Number(paid || 0);
+  const amountNumber = Number(amount || 0);
+  if (amountNumber <= 0) return '';
+  if (paidNumber >= amountNumber) return 'Soldé';
+  if (paidNumber > 0) return 'Partiel';
+  return 'Impayé';
 }
 
 function isCancelled_(status) {
-  return ['annule', 'annulee', 'no-show', 'refuse', 'refusee'].includes(norm_(status));
+  return ['annule', 'annulee', 'no-show', 'refuse', 'refusee', 'annulé', 'annulée'].includes(norm_(status));
+}
+
+function sameDate_(a, b) {
+  return a && b && a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+}
+
+function today_() {
+  const now = new Date();
+  return new Date(now.getFullYear(), now.getMonth(), now.getDate());
 }
 
 function clean_(value) {
