@@ -276,6 +276,7 @@ function receiptEmailHtml_(receipt) {
     receiptEmailRow_('Tarif nuit', moneyText_(receipt.nightRate)),
     receiptEmailRow_('Montant prévisionnel', moneyText_(receipt.amount)),
     '</table>',
+    accessInstructionsHtml_(),
     '<p style="margin-top:16px;color:#667085">' + escapeHtml_(receipt.paymentNotice || 'Validation par la réception.') + '</p>',
     '</div>',
   ].join('');
@@ -305,8 +306,57 @@ function plainReceiptText_(receipt) {
     'Tarif nuit : ' + moneyText_(receipt.nightRate),
     'Montant prévisionnel : ' + moneyText_(receipt.amount),
     '',
+    accessInstructionsText_(),
+    '',
     receipt.paymentNotice || 'Validation par la réception.',
-  ].join('\n');
+  ].filter(function(line) { return line !== null && line !== undefined; }).join('\n');
+}
+
+function accessInstructionsHtml_() {
+  const info = getAccessInfo_();
+  const parts = [];
+
+  if (info.mailboxCode) {
+    parts.push('<p style="margin:6px 0"><strong>Code boîte aux lettres :</strong> ' + escapeHtml_(info.mailboxCode) + '</p>');
+  }
+  if (info.keyBoxCode) {
+    parts.push('<p style="margin:6px 0"><strong>Code boîte à clé :</strong> ' + escapeHtml_(info.keyBoxCode) + '</p>');
+  }
+  if (info.badgeNotice) {
+    parts.push('<p style="margin:8px 0 0">' + escapeHtml_(info.badgeNotice) + '</p>');
+  }
+
+  if (!parts.length) return '';
+
+  return [
+    '<div style="margin-top:16px;padding:12px;border-radius:8px;background:#fff7ed;border:1px solid #fed7aa;color:#7c2d12">',
+    '<h3 style="margin:0 0 8px;color:#7c2d12">Informations d’arrivée</h3>',
+    parts.join(''),
+    '</div>',
+  ].join('');
+}
+
+function accessInstructionsText_() {
+  const info = getAccessInfo_();
+  const lines = [];
+
+  if (info.mailboxCode || info.keyBoxCode || info.badgeNotice) {
+    lines.push('Informations d’arrivée');
+  }
+  if (info.mailboxCode) lines.push('Code boîte aux lettres : ' + info.mailboxCode);
+  if (info.keyBoxCode) lines.push('Code boîte à clé : ' + info.keyBoxCode);
+  if (info.badgeNotice) lines.push(info.badgeNotice);
+
+  return lines.join('\n');
+}
+
+function getAccessInfo_() {
+  const props = PropertiesService.getScriptProperties();
+  return {
+    mailboxCode: clean_(props.getProperty('MAILBOX_CODE')),
+    keyBoxCode: clean_(props.getProperty('KEYBOX_CODE')),
+    badgeNotice: clean_(props.getProperty('BADGE_NOTICE')) || 'Le badge permet d’ouvrir la porte. Merci de le remettre aussitôt dans la boîte à clé pour les prochains.',
+  };
 }
 
 function selectAvailableRoom_(rooms, requestedRoom) {
