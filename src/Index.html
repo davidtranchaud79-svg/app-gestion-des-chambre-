@@ -29,8 +29,27 @@
     .rooms { display: grid; gap: 10px; }
     .room { display: flex; justify-content: space-between; gap: 10px; border: 1px solid #ddd; border-radius: 8px; padding: 12px; }
     .badge { background: #e8f7ee; color: #166534; border-radius: 20px; padding: 5px 9px; font-weight: 700; font-size: 12px; }
+    .hidden { display: none; }
+    .receipt { border-color: #5a0d0d; }
+    .receipt-head { display: flex; justify-content: space-between; gap: 16px; align-items: flex-start; border-bottom: 1px solid #ddd; padding-bottom: 12px; margin-bottom: 12px; }
+    .receipt-head h2 { margin: 0 0 4px; color: #5a0d0d; }
+    .receipt-ref { text-align: right; font-weight: 700; color: #5a0d0d; }
+    .receipt-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 16px; }
+    .receipt-row { border-bottom: 1px solid #eee; padding: 7px 0; }
+    .receipt-row span { display: block; color: #667085; font-size: 12px; }
+    .receipt-row strong { display: block; margin-top: 2px; }
+    .receipt-total { margin-top: 14px; padding: 12px; border-radius: 8px; background: #fff7ed; color: #92400e; font-weight: 700; }
+    .receipt-note { margin-top: 10px; font-size: 13px; color: #667085; }
+    .receipt-actions { margin-top: 14px; display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
     small { color: #667085; }
-    @media (max-width: 700px) { .grid, .actions { grid-template-columns: 1fr; } }
+    @media (max-width: 700px) { .grid, .actions, .receipt-grid, .receipt-actions { grid-template-columns: 1fr; } .receipt-ref { text-align: left; } .receipt-head { display: block; } }
+    @media print {
+      body { background: white; }
+      body * { visibility: hidden; }
+      #receiptPanel, #receiptPanel * { visibility: visible; }
+      #receiptPanel { position: absolute; left: 0; top: 0; width: 100%; border: 0; margin: 0; padding: 20px; }
+      .no-print { display: none !important; }
+    }
   </style>
 </head>
 <body>
@@ -38,7 +57,7 @@
   <h1>Gestion chambre</h1>
   <p>Verification des disponibilites en temps reel puis demande de reservation.</p>
 
-  <section>
+  <section class="no-print">
     <div class="grid">
       <div>
         <label for="arrival">Arrivee</label>
@@ -80,7 +99,15 @@
     <div id="msg" class="msg"></div>
   </section>
 
-  <section>
+  <section id="receiptPanel" class="receipt hidden">
+    <div id="receiptContent"></div>
+    <div class="receipt-actions no-print">
+      <button type="button" onclick="window.print()">Imprimer le reçu</button>
+      <button class="secondary" type="button" onclick="newRequest()">Nouvelle demande</button>
+    </div>
+  </section>
+
+  <section class="no-print">
     <h2>Disponibilites</h2>
     <div id="rooms" class="rooms"></div>
   </section>
@@ -99,6 +126,8 @@
     sendButton: document.getElementById('sendButton'),
     msg: document.getElementById('msg'),
     rooms: document.getElementById('rooms'),
+    receiptPanel: document.getElementById('receiptPanel'),
+    receiptContent: document.getElementById('receiptContent'),
   };
 
   window.addEventListener('load', init);
@@ -113,10 +142,10 @@
     elements.departure.min = iso(tomorrow);
 
     elements.arrival.addEventListener('change', syncDeparture);
-    elements.checkButton.addEventListener('click', checkRooms);
+    elements.checkButton.addEventListener('click', () => checkRooms(false));
     elements.sendButton.addEventListener('click', sendRequest);
 
-    checkRooms();
+    checkRooms(false);
   }
 
   function syncDeparture() {
@@ -141,22 +170,25 @@
     };
   }
 
-  function checkRooms() {
+  function checkRooms(silent) {
     setBusy(true);
-    show('warn', 'Verification en cours...');
+    if (!silent) {
+      hideReceipt();
+      show('warn', 'Verification en cours...');
+    }
 
     google.script.run
       .withSuccessHandler((result) => {
         setBusy(false);
         if (!result || !result.ok) {
           renderRooms([]);
-          show('bad', result && result.error ? result.error : 'Erreur de verification.');
+          if (!silent) show('bad', result && result.error ? result.error : 'Erreur de verification.');
           return;
         }
 
         renderRooms(result.rooms || []);
         fillSelect(result.rooms || []);
-        show('ok', result.availableCount + ' chambre(s) disponible(s) sur ' + result.totalCount + '.');
+        if (!silent) show('ok', result.availableCount + ' chambre(s) disponible(s) sur ' + result.totalCount + '.');
       })
       .withFailureHandler((err) => {
         setBusy(false);
@@ -189,14 +221,84 @@
           return;
         }
 
-        show('ok', result.message + ' Reference : ' + result.id + '. Chambre : ' + result.room + '.');
-        checkRooms();
+        const receipt = result.receipt || buildFallbackReceipt(result, data);
+        renderReceipt(receipt);
+        show('ok', result.message + ' Reference : ' + result.id + '. Reçu disponible ci-dessous.');
+        checkRooms(true);
       })
       .withFailureHandler((err) => {
         setBusy(false);
         show('bad', err && err.message ? err.message : String(err));
       })
       .createReservation(data);
+  }
+
+  function buildFallbackReceipt(result, data) {
+    return {
+      id: result.id,
+      status: result.status || 'En attente',
+      occupant: data.occupant,
+      phone: data.phone,
+      email: data.email,
+      room: result.room,
+      arrival: dateFr(data.arrival),
+      departure: dateFr(data.departure),
+      nights: result.nights || '',
+      nightRate: '',
+      amount: result.amount || 0,
+      createdAt: new Date().toLocaleString('fr-FR'),
+      paymentNotice: 'Montant prévisionnel, validation par la réception.',
+    };
+  }
+
+  function renderReceipt(receipt) {
+    elements.receiptPanel.classList.remove('hidden');
+    elements.receiptContent.innerHTML = `
+      <div class="receipt-head">
+        <div>
+          <h2>Reçu de demande de réservation</h2>
+          <p>Ce reçu confirme l’enregistrement de la demande. La réservation reste soumise à validation par la réception.</p>
+        </div>
+        <div class="receipt-ref">
+          <div>Référence</div>
+          <div>${safe(receipt.id)}</div>
+        </div>
+      </div>
+      <div class="receipt-grid">
+        ${receiptRow('Statut', receipt.status)}
+        ${receiptRow('Date de demande', receipt.createdAt)}
+        ${receiptRow('Demandeur', receipt.occupant)}
+        ${receiptRow('Téléphone', receipt.phone || '-')}
+        ${receiptRow('Email', receipt.email || '-')}
+        ${receiptRow('Chambre', receipt.room)}
+        ${receiptRow('Arrivée', receipt.arrival)}
+        ${receiptRow('Départ', receipt.departure)}
+        ${receiptRow('Nombre de nuits', receipt.nights)}
+        ${receiptRow('Tarif nuit', money(receipt.nightRate))}
+      </div>
+      <div class="receipt-total">Montant prévisionnel : ${money(receipt.amount)}</div>
+      <div class="receipt-note">${safe(receipt.paymentNotice || 'Validation par la réception.')}</div>
+    `;
+    elements.receiptPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  function receiptRow(label, value) {
+    return '<div class="receipt-row"><span>' + safe(label) + '</span><strong>' + safe(value) + '</strong></div>';
+  }
+
+  function hideReceipt() {
+    elements.receiptPanel.classList.add('hidden');
+    elements.receiptContent.innerHTML = '';
+  }
+
+  function newRequest() {
+    hideReceipt();
+    elements.occupant.value = '';
+    elements.phone.value = '';
+    elements.email.value = '';
+    elements.comment.value = '';
+    show('ok', 'Nouvelle demande prête.');
+    elements.occupant.focus();
   }
 
   function renderRooms(rooms) {
@@ -245,6 +347,13 @@
 
   function iso(date) {
     return date.toISOString().slice(0, 10);
+  }
+
+  function dateFr(value) {
+    if (!value) return '';
+    const parts = value.split('-');
+    if (parts.length !== 3) return value;
+    return parts[2] + '/' + parts[1] + '/' + parts[0];
   }
 
   function money(value) {
