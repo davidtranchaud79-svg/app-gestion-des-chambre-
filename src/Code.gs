@@ -114,11 +114,13 @@ function createReservation(payload) {
 
     const id = createReservationId_();
     const amount = stay.nights * Number(selected.nightRate || 0);
+    const status = 'En attente';
+    const createdAt = new Date();
 
     const row = [
       id,
-      new Date(),
-      'En attente',
+      createdAt,
+      status,
       requestedRoom || '',
       selected.room,
       name,
@@ -150,7 +152,23 @@ function createReservation(payload) {
       room: selected.room,
       nights: stay.nights,
       amount,
+      status,
       message: 'Demande envoyée. La réception doit valider.',
+      receipt: {
+        id,
+        status,
+        occupant: name,
+        phone,
+        email,
+        room: selected.room,
+        arrival: formatFr_(stay.arrival),
+        departure: formatFr_(stay.departure),
+        nights: stay.nights,
+        nightRate: Number(selected.nightRate || 0),
+        amount,
+        createdAt: formatDateTimeFr_(createdAt),
+        paymentNotice: 'Montant prévisionnel, validation par la réception.',
+      },
     };
   } catch (err) {
     return { ok: false, error: err.message || String(err) };
@@ -287,6 +305,10 @@ function norm_(value) {
 
 function formatFr_(date) {
   return Utilities.formatDate(date, Session.getScriptTimeZone(), 'dd/MM/yyyy');
+}
+
+function formatDateTimeFr_(date) {
+  return Utilities.formatDate(date, Session.getScriptTimeZone(), 'dd/MM/yyyy HH:mm');
 }
 
 function toIso_(date) {
