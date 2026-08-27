@@ -4,18 +4,18 @@ function setupAdminModule() {
   ensureAdminSheets_(ss);
   refreshRegistryOperationalFlags_(ss);
   repairRoomStatusFormulas_(ss);
+  if (typeof refreshVisualPlanning_ === 'function') refreshVisualPlanning_(ss);
 
   const props = PropertiesService.getScriptProperties();
-  const effectiveEmail = clean_(Session.getEffectiveUser().getEmail());
-  if (!clean_(props.getProperty('ADMIN_EMAIL')) && effectiveEmail) {
-    props.setProperty('ADMIN_EMAIL', effectiveEmail);
-  }
+  ensureAccessProperties_(props);
 
   return {
     ok: true,
     message: 'Module administrateur initialisé.',
     adminEmail: getAdminEmail_() || 'ADMIN_EMAIL à renseigner',
     pinConfigured: Boolean(clean_(props.getProperty('ADMIN_PIN'))),
+    mailboxCodeConfigured: Boolean(clean_(props.getProperty('MAILBOX_CODE'))),
+    keyBoxCodeConfigured: Boolean(clean_(props.getProperty('KEYBOX_CODE'))),
     adminUrl: getAdminUrl_(),
   };
 }
@@ -65,6 +65,43 @@ function adminScanAndNotifyAnomalies() {
   return anomalies.length + ' anomalie(s) détectée(s).';
 }
 
+function repairMissingPublicReservationsInRegistry() {
+  const lock = LockService.getScriptLock();
+  if (!lock.tryLock(10000)) {
+    return 'Une autre action est en cours. Réessaie dans quelques secondes.';
+  }
+
+  try {
+    const ss = SpreadsheetApp.openById(CONFIG.spreadsheetId);
+    ensureAdminSheets_(ss);
+    const requests = getAdminRequests_(ss);
+    const registry = getAdminRegistryRows_(ss);
+    const registryIds = {};
+    registry.forEach((entry) => {
+      if (entry.id) registryIds[norm_(entry.id)] = true;
+    });
+
+    let repaired = 0;
+    requests.forEach((request) => {
+      if (!request.id || isCancelled_(request.status)) return;
+      if (!adminIsValidatedRequest_(request)) return;
+      if (!request.arrivalDate || !request.departureDate || request.departureDate <= request.arrivalDate) return;
+      if (registryIds[norm_(request.registryId || request.id)]) return;
+
+      const result = ensureRegistryForRequest_(ss, request, 'Prévu', 'Réparation automatique : demande publique reliée au Registre');
+      registryIds[norm_(result.id)] = true;
+      repaired++;
+    });
+
+    refreshRegistryOperationalFlags_(ss);
+    if (typeof refreshVisualPlanning_ === 'function') refreshVisualPlanning_(ss);
+    SpreadsheetApp.flush();
+    return repaired + ' demande(s) publique(s) reliée(s) au Registre.';
+  } finally {
+    lock.releaseLock();
+  }
+}
+
 function adminLogin(pin) {
   assertAdminPin_(pin);
   const token = Utilities.getUuid();
@@ -78,42 +115,49 @@ function adminLogin(pin) {
 }
 
 function getAdminDashboard(token) {
-  assertAdminToken_(token);
+  try {
+    assertAdminToken_(token);
 
-  const ss = SpreadsheetApp.openById(CONFIG.spreadsheetId);
-  ensureAdminSheets_(ss);
-  refreshRegistryOperationalFlags_(ss);
+    const ss = SpreadsheetApp.openById(CONFIG.spreadsheetId);
+    ensureAdminSheets_(ss);
+    refreshRegistryOperationalFlags_(ss);
 
-  const requests = getAdminRequests_(ss);
-  const rooms = getAdminRoomDashboard_(ss);
-  const anomalies = scanReservationAnomalies_(ss, requests, rooms);
-  writeAdminAnomalies_(ss, anomalies);
+    const requests = getAdminRequests_(ss);
+    const rooms = getAdminRoomDashboard_(ss);
+    const anomalies = scanReservationAnomalies_(ss, requests, rooms);
+    writeAdminAnomalies_(ss, anomalies);
 
-  const pending = requests.filter(adminIsPendingRequest_);
-  const occupied = rooms.filter((room) => room.status === 'Occupée' || room.status === 'Rotation du jour');
-  const free = rooms.filter((room) => room.status === 'Libre');
-  const arrivalsToday = rooms.filter((room) => room.movement === 'Arrivée du jour' || room.movement === 'Rotation du jour');
-  const departuresToday = rooms.filter((room) => room.movement === 'Départ du jour' || room.movement === 'Rotation du jour');
+    const pending = requests.filter(adminIsPendingRequest_);
+    const occupied = rooms.filter((room) => room.status === 'Occupée' || room.status === 'Rotation du jour');
+    const free = rooms.filter((room) => room.status === 'Libre');
+    const arrivalsToday = rooms.filter((room) => room.movement === 'Arrivée du jour' || room.movement === 'Rotation du jour');
+    const departuresToday = rooms.filter((room) => room.movement === 'Départ du jour' || room.movement === 'Rotation du jour');
 
-  return {
-    ok: true,
-    generatedAt: formatDateTimeFr_(new Date()),
-    adminUrl: getAdminUrl_(),
-    adminEmailConfigured: Boolean(getAdminEmail_()),
-    stats: {
-      pending: pending.length,
-      anomalies: anomalies.length,
-      roomsTotal: rooms.length,
-      roomsFree: free.length,
-      roomsOccupied: occupied.length,
-      arrivalsToday: arrivalsToday.length,
-      departuresToday: departuresToday.length,
-    },
-    pending: pending.slice(0, 60),
-    requests: requests.slice(0, 100),
-    rooms,
-    anomalies: anomalies.slice(0, 100),
-  };
+    return {
+      ok: true,
+      generatedAt: formatDateTimeFr_(new Date()),
+      adminUrl: getAdminUrl_(),
+      adminEmailConfigured: Boolean(getAdminEmail_()),
+      stats: {
+        pending: pending.length,
+        anomalies: anomalies.length,
+        roomsTotal: rooms.length,
+        roomsFree: free.length,
+        roomsOccupied: occupied.length,
+        arrivalsToday: arrivalsToday.length,
+        departuresToday: departuresToday.length,
+      },
+      pending: pending.slice(0, 60).map(adminRequestForClient_),
+      requests: requests.slice(0, 100).map(adminRequestForClient_),
+      rooms: rooms.map(adminRoomForClient_),
+      anomalies: anomalies.slice(0, 100).map(adminAnomalyForClient_),
+    };
+  } catch (err) {
+    return {
+      ok: false,
+      error: err && err.message ? err.message : String(err),
+    };
+  }
 }
 
 function adminApproveReservation(token, reference, note) {
@@ -160,6 +204,7 @@ function adminApproveReservation(token, reference, note) {
     appendAdminNote_(registry.sheet, registry.rowNumber, 19, decision);
 
     refreshRegistryOperationalFlags_(ss);
+    if (typeof refreshVisualPlanning_ === 'function') refreshVisualPlanning_(ss);
     SpreadsheetApp.flush();
 
     const mailResult = sendAdminDecisionEmail_(request, 'approved', note);
@@ -201,11 +246,12 @@ function adminRejectReservation(token, reference, note) {
 
     const registry = findAdminRegistryById_(ss, request.registryId || request.id) || findAdminRegistryByRequest_(ss, request);
     if (registry) {
-      registry.sheet.getRange(registry.rowNumber, 15).setValue('Refusé');
+      registry.sheet.getRange(registry.rowNumber, 15).setValue('Annulé');
       appendAdminNote_(registry.sheet, registry.rowNumber, 19, decision);
     }
 
     refreshRegistryOperationalFlags_(ss);
+    if (typeof refreshVisualPlanning_ === 'function') refreshVisualPlanning_(ss);
     SpreadsheetApp.flush();
 
     const mailResult = sendAdminDecisionEmail_(request, 'rejected', note);
@@ -352,6 +398,56 @@ function adminRequestFromRow_(row, rowNumber) {
   };
 }
 
+function adminRequestForClient_(request) {
+  return {
+    rowNumber: request.rowNumber,
+    id: request.id,
+    createdAt: request.createdAt,
+    createdAtTime: request.createdAtTime,
+    status: request.status,
+    requestedRoom: request.requestedRoom,
+    room: request.room,
+    occupant: request.occupant,
+    phone: request.phone,
+    email: request.email,
+    arrival: request.arrival,
+    departure: request.departure,
+    nights: request.nights,
+    nightRate: request.nightRate,
+    amount: request.amount,
+    payment: request.payment,
+    source: request.source,
+    comment: request.comment,
+    adminDecision: request.adminDecision,
+    integratedRegistry: request.integratedRegistry,
+    registryId: request.registryId,
+    availabilityNote: request.availabilityNote,
+  };
+}
+
+function adminRoomForClient_(room) {
+  return {
+    room: room.room,
+    type: room.type,
+    capacity: room.capacity,
+    nightRate: room.nightRate,
+    status: room.status,
+    movement: room.movement,
+    occupant: room.occupant,
+    manualStatus: room.manualStatus,
+  };
+}
+
+function adminAnomalyForClient_(item) {
+  return {
+    level: item.level,
+    reference: item.reference,
+    room: item.room,
+    type: item.type,
+    message: item.message,
+  };
+}
+
 function getAdminRegistryRows_(ss) {
   const sheet = ss.getSheetByName(CONFIG.sheets.registry);
   if (!sheet) return [];
@@ -451,6 +547,11 @@ function scanReservationAnomalies_(ss, requests, rooms) {
   rooms = rooms || getAdminRoomDashboard_(ss);
 
   const registry = getAdminRegistryRows_(ss);
+  const today = today_();
+  const alertFrom = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 1);
+  const activeRequests = requests.filter((request) => adminShouldScanRequest_(request, alertFrom));
+  const activeRegistryForBasicChecks = registry.filter((entry) => adminShouldScanRegistryBasic_(entry, alertFrom));
+  const activeRegistryForOverlap = registry.filter((entry) => adminShouldScanRegistryOverlap_(entry, alertFrom));
   const roomByKey = {};
   rooms.forEach((room) => {
     roomByKey[norm_(room.room)] = room;
@@ -459,7 +560,7 @@ function scanReservationAnomalies_(ss, requests, rooms) {
   const anomalies = [];
   const requestIds = {};
 
-  requests.forEach((request) => {
+  activeRequests.forEach((request) => {
     if (requestIds[request.id]) {
       addAdminAnomaly_(anomalies, 'critical', request.id, request.room, 'Doublon demande', 'Référence présente plusieurs fois dans Reservations_Public.');
     }
@@ -478,7 +579,7 @@ function scanReservationAnomalies_(ss, requests, rooms) {
       addAdminAnomaly_(anomalies, 'critical', request.id, request.room, 'Chambre inconnue', 'La chambre n’existe pas dans l’onglet Chambres.');
     }
 
-    if (!isCancelled_(request.status)) {
+    if (adminIsValidatedRequest_(request)) {
       const linked = registry.some((entry) => norm_(entry.id) === norm_(request.registryId || request.id));
       if (!linked) {
         addAdminAnomaly_(anomalies, 'critical', request.id, request.room, 'Non reliée au Registre', 'La demande existe dans Reservations_Public mais pas dans Registre.');
@@ -493,7 +594,7 @@ function scanReservationAnomalies_(ss, requests, rooms) {
     }
   });
 
-  registry.forEach((entry) => {
+  activeRegistryForBasicChecks.forEach((entry) => {
     if (!entry.id) {
       addAdminAnomaly_(anomalies, 'warning', '', entry.room, 'ID manquant', 'Une ligne Registre n’a pas de référence.');
     }
@@ -508,7 +609,7 @@ function scanReservationAnomalies_(ss, requests, rooms) {
     }
   });
 
-  const activeRegistry = registry
+  const activeRegistry = activeRegistryForOverlap
     .filter((entry) => entry.room && entry.arrival && entry.departure && !isCancelled_(entry.status))
     .sort((a, b) => norm_(a.room).localeCompare(norm_(b.room)) || a.arrival - b.arrival);
 
@@ -524,7 +625,7 @@ function scanReservationAnomalies_(ss, requests, rooms) {
     }
   }
 
-  requests.forEach((request) => {
+  activeRequests.forEach((request) => {
     const registryEntry = registry.find((entry) => norm_(entry.id) === norm_(request.registryId || request.id));
     if (!registryEntry) return;
 
@@ -537,6 +638,31 @@ function scanReservationAnomalies_(ss, requests, rooms) {
   });
 
   return anomalies;
+}
+
+function adminShouldScanRequest_(request, alertFrom) {
+  if (!request || !request.id) return false;
+  if (adminIsPendingRequest_(request)) return true;
+  if (!request.departureDate) return true;
+  return request.departureDate >= alertFrom;
+}
+
+function adminShouldScanRegistryBasic_(entry, alertFrom) {
+  if (!entry || (!entry.id && !entry.room && !entry.occupant)) return false;
+  if (planningIsPendingAdminStatus_(entry.status)) return true;
+  if (!entry.departure) return false;
+  return entry.departure >= alertFrom;
+}
+
+function adminShouldScanRegistryOverlap_(entry, alertFrom) {
+  if (!entry || !entry.room || !entry.arrival || !entry.departure) return false;
+  if (isCancelled_(entry.status)) return false;
+  return entry.departure >= alertFrom;
+}
+
+function planningIsPendingAdminStatus_(status) {
+  const normalized = norm_(status);
+  return normalized === 'a valider' || normalized === 'en attente' || normalized === 'attente validation';
 }
 
 function addAdminAnomaly_(list, level, reference, room, type, message) {
@@ -698,6 +824,12 @@ function adminIsPendingRequest_(request) {
     (status === 'integree' && !decision.includes('validee'));
 }
 
+function adminIsValidatedRequest_(request) {
+  const status = norm_(request && request.status);
+  const decision = norm_(request && request.adminDecision);
+  return ['validee', 'validée', 'prevu', 'prévu'].includes(status) || decision.includes('validee');
+}
+
 function appendDecisionText_(decision, note) {
   const parts = [decision + ' le ' + formatDateTimeFr_(new Date())];
   if (clean_(note)) parts.push('Note : ' + clean_(note));
@@ -746,6 +878,7 @@ function sendAdminDecisionEmail_(request, decision, note) {
       '<table style="width:100%;border-collapse:collapse;margin-top:14px">',
       rows,
       '</table>',
+      typeof receiptMessageHtml_ === 'function' ? receiptMessageHtml_() : '',
       approved ? accessInstructionsHtml_() : '',
       noteHtml,
       '</div>',
@@ -766,6 +899,7 @@ function sendAdminDecisionEmail_(request, decision, note) {
       'Départ : ' + request.departure,
       'Nombre de nuits : ' + request.nights,
       'Montant prévisionnel : ' + moneyText_(request.amount),
+      typeof receiptMessageText_ === 'function' ? '\n' + receiptMessageText_() : '',
       approved ? '\n' + accessInstructionsText_() : '',
       clean_(note) ? '\nMessage réception : ' + clean_(note) : '',
     ].join('\n');
@@ -889,8 +1023,23 @@ function logAdminNotification_(type, level, reference, message) {
 }
 
 function getAdminEmail_() {
-  return clean_(PropertiesService.getScriptProperties().getProperty('ADMIN_EMAIL')) ||
-    clean_(Session.getEffectiveUser().getEmail());
+  return clean_(PropertiesService.getScriptProperties().getProperty('ADMIN_EMAIL'));
+}
+
+function ensureAccessProperties_(props) {
+  const defaults = typeof ACCESS_DEFAULTS !== 'undefined'
+    ? ACCESS_DEFAULTS
+    : {
+        mailboxCode: '4570',
+        keyBoxCode: '7045',
+        badgeNotice: 'Le badge permet d’ouvrir la porte. Merci de le remettre aussitôt dans la boîte à clé pour les prochains.',
+        receiptMessage: 'Merci pour votre réservation. La chambre sera préparée pour votre arrivée. En cas de changement ou de retard, merci de prévenir la réception le plus tôt possible.',
+      };
+
+  if (!clean_(props.getProperty('MAILBOX_CODE'))) props.setProperty('MAILBOX_CODE', defaults.mailboxCode);
+  if (!clean_(props.getProperty('KEYBOX_CODE'))) props.setProperty('KEYBOX_CODE', defaults.keyBoxCode);
+  if (!clean_(props.getProperty('BADGE_NOTICE'))) props.setProperty('BADGE_NOTICE', defaults.badgeNotice);
+  if (!clean_(props.getProperty('RECEIPT_MESSAGE'))) props.setProperty('RECEIPT_MESSAGE', defaults.receiptMessage);
 }
 
 function getAdminUrl_() {
