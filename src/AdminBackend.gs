@@ -1023,8 +1023,8 @@ function ensureAccessProperties_(props) {
     : {
         mailboxCode: '4570',
         keyBoxCode: '7045',
-        badgeNotice: 'Le badge permet d’ouvrir la porte. Merci de le remettre aussitôt dans la boîte à clé pour les prochains.',
-        receiptMessage: 'Merci pour votre réservation. La chambre sera préparée pour votre arrivée. En cas de changement ou de retard, merci de prévenir la réception le plus tôt possible.',
+        badgeNotice: 'La clef (badge électronique) de la porte d’entrée est dans la boîte aux lettres à l’entrée de la Cayenne. Placer le badge sur la porte, tirer fort puis pousser immédiatement la porte.',
+        receiptMessage: 'Votre réservation est confirmée. Voici les informations utiles pour votre arrivée. En cas de changement ou de retard, merci de prévenir la réception le plus tôt possible.',
       };
 
   if (!clean_(props.getProperty('MAILBOX_CODE'))) props.setProperty('MAILBOX_CODE', defaults.mailboxCode);
