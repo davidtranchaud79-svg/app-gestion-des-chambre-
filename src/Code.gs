@@ -184,8 +184,6 @@ function createReservation(payload) {
 
     try {
       notifyAdminNewReservation_(receipt, comment, emailWarning);
-      const anomalies = scanReservationAnomalies_(ss);
-      if (anomalies.length) notifyAdminAnomalies_(anomalies, true);
     } catch (notifyErr) {
       logAdminNotification_('ERREUR_NOTIFICATION', 'warning', registryId, notifyErr.message || String(notifyErr));
     }
