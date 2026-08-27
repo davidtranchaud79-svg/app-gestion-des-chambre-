@@ -143,20 +143,6 @@ function mobileBuildNotification_(item) {
     };
   }
 
-  if (type === 'ANOMALIES') {
-    return {
-      title: 'Anomalie réservation détectée',
-      lines: mobileNotificationLines_(item),
-    };
-  }
-
-  if (type === 'ANOMALIE_VALIDATION') {
-    return {
-      title: 'Blocage validation réservation',
-      lines: mobileNotificationLines_(item),
-    };
-  }
-
   return null;
 }
 
