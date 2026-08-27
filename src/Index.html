@@ -41,6 +41,17 @@
     .receipt-total { margin-top: 14px; padding: 12px; border-radius: 8px; background: #fff7ed; color: #92400e; font-weight: 700; }
     .receipt-note { margin-top: 10px; font-size: 13px; color: #667085; }
     .receipt-actions { margin-top: 14px; display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .rules-intro { margin: 0 0 10px; color: #667085; }
+    .rules-box { max-height: 260px; overflow-y: auto; border: 1px solid #d9dde3; border-radius: 8px; padding: 14px; background: #fff; }
+    .rules-box h3 { margin: 14px 0 6px; color: #5a0d0d; font-size: 17px; }
+    .rules-box h3:first-child { margin-top: 0; }
+    .rules-box ul { margin: 0 0 8px 18px; padding: 0; }
+    .rules-box li { margin: 0 0 6px; line-height: 1.35; }
+    .acceptance { margin-top: 12px; padding: 12px; border: 1px solid #d9dde3; border-radius: 8px; background: #f8fafc; }
+    .acceptance label { display: flex; gap: 10px; align-items: flex-start; margin: 0; font-size: 14px; line-height: 1.35; }
+    .acceptance input { width: auto; margin-top: 2px; }
+    .acceptance.disabled { opacity: .68; }
+    .rules-hint { margin-top: 8px; color: #92400e; font-size: 13px; }
     small { color: #667085; }
     @media (max-width: 700px) { .grid, .actions, .receipt-grid, .receipt-actions { grid-template-columns: 1fr; } .receipt-ref { text-align: left; } .receipt-head { display: block; } }
     @media print {
@@ -99,6 +110,75 @@
       </div>
     </div>
 
+    <section class="rules-section">
+      <h2>Règlement du lit du passant</h2>
+      <p class="rules-intro">Lis le règlement jusqu’au bout pour pouvoir confirmer que tu l’acceptes avant d’envoyer la demande.</p>
+      <div id="rulesBox" class="rules-box" tabindex="0" aria-label="Règlement du lit du passant">
+        <h3>1. Réservation</h3>
+        <ul>
+          <li>Toute demande doit être faite par le formulaire de réservation public.</li>
+          <li>La demande doit idéalement être transmise au moins 3 jours avant l’arrivée.</li>
+          <li>Une demande de dernière minute peut être déposée, mais elle n’est pas garantie sans validation explicite de la réception.</li>
+          <li>Aucune réservation à la volée, sans trace dans le formulaire, n’est considérée comme validée.</li>
+        </ul>
+
+        <h3>2. Validation et attribution</h3>
+        <ul>
+          <li>La chambre est attribuée après vérification des disponibilités par l’administrateur.</li>
+          <li>Le choix homme/femme sert à faciliter l’attribution et l’organisation des chambres.</li>
+          <li>La validation finale est envoyée par email lorsque l’adresse a été renseignée.</li>
+        </ul>
+
+        <h3>3. Accès et clefs</h3>
+        <ul>
+          <li>Le passant ne dispose pas de clef d’entrée de la Cayenne : il doit attendre qu’une personne lui ouvre la porte.</li>
+          <li>Le code de la boîte à clef de la chambre est communiqué uniquement après validation de la réservation.</li>
+          <li>La clef de chambre doit être utilisée uniquement pour la chambre attribuée.</li>
+          <li>Au départ, la clef doit impérativement être déposée dans la boîte prévue pour le retour des clefs du passant.</li>
+        </ul>
+
+        <h3>4. Règles de conduite</h3>
+        <ul>
+          <li>Respecter le calme des lieux, particulièrement le soir et le matin.</li>
+          <li>Ne pas entrer dans une autre chambre.</li>
+          <li>Ne rien prendre dans le frigo, le congélateur ou les espaces communs sans autorisation.</li>
+          <li>Respecter les espaces communs : cuisine, sanitaires, douches et circulations.</li>
+          <li>Signaler rapidement tout problème de propreté, de clef, de chambre ou de matériel.</li>
+        </ul>
+
+        <h3>5. Draps et propreté</h3>
+        <ul>
+          <li>Le lit doit être laissé propre au départ.</li>
+          <li>Les draps doivent être changés le matin du départ selon les consignes affichées sur place.</li>
+          <li>La chambre ne doit pas être encombrée et doit rester disponible pour le passant suivant.</li>
+        </ul>
+
+        <h3>6. Paiement</h3>
+        <ul>
+          <li>Le tarif de référence 2026 est de 15 euros par nuitée, hors repas.</li>
+          <li>Le paiement se fait en espèces uniquement, sous forme de don à la Cayenne.</li>
+          <li>Aucun justificatif ni facture ne sera établi pour ce don.</li>
+          <li>Les repas éventuels ne sont pas inclus dans le prix de la nuitée.</li>
+        </ul>
+
+        <h3>7. Départ</h3>
+        <ul>
+          <li>Avant de partir, vérifier que la chambre est rangée, que les draps sont traités selon la consigne et que la clef est bien rendue.</li>
+          <li>En cas de perte de clef ou de difficulté, prévenir immédiatement la réception ou un responsable de la Cayenne.</li>
+        </ul>
+
+        <h3>Acceptation</h3>
+        <p>En validant le formulaire, le demandeur déclare avoir lu le règlement jusqu’au bout, l’avoir compris et l’accepter pour toute la durée de son séjour.</p>
+      </div>
+      <div id="rulesAcceptanceBox" class="acceptance disabled">
+        <label>
+          <input id="rulesAccepted" type="checkbox" disabled>
+          <span>J’ai lu le règlement jusqu’au bout et je l’accepte pour cette demande de réservation.</span>
+        </label>
+        <div id="rulesHint" class="rules-hint">Déroule le règlement jusqu’en bas pour activer la case.</div>
+      </div>
+    </section>
+
     <div class="actions">
       <button class="secondary" id="checkButton" type="button">Verifier</button>
       <button id="sendButton" type="button">Envoyer la demande</button>
@@ -122,6 +202,9 @@
 </main>
 
 <script>
+  const RULES_VERSION = 'reglement-lit-passant-2026-08-27';
+  let rulesRead = false;
+
   const elements = {
     arrival: document.getElementById('arrival'),
     departure: document.getElementById('departure'),
@@ -131,6 +214,10 @@
     phone: document.getElementById('phone'),
     email: document.getElementById('email'),
     comment: document.getElementById('comment'),
+    rulesBox: document.getElementById('rulesBox'),
+    rulesAccepted: document.getElementById('rulesAccepted'),
+    rulesAcceptanceBox: document.getElementById('rulesAcceptanceBox'),
+    rulesHint: document.getElementById('rulesHint'),
     checkButton: document.getElementById('checkButton'),
     sendButton: document.getElementById('sendButton'),
     msg: document.getElementById('msg'),
@@ -151,9 +238,11 @@
     elements.departure.min = iso(tomorrow);
 
     elements.arrival.addEventListener('change', syncDeparture);
+    elements.rulesBox.addEventListener('scroll', updateRulesAcceptance);
     elements.checkButton.addEventListener('click', () => checkRooms(false));
     elements.sendButton.addEventListener('click', sendRequest);
 
+    updateRulesAcceptance();
     checkRooms(false);
   }
 
@@ -177,6 +266,8 @@
       phone: elements.phone.value.trim(),
       email: elements.email.value.trim(),
       comment: elements.comment.value.trim(),
+      rulesAccepted: elements.rulesAccepted.checked,
+      rulesVersion: RULES_VERSION,
     };
   }
 
@@ -220,6 +311,12 @@
       return;
     }
 
+    if (!data.rulesAccepted) {
+      show('warn', 'Lis le règlement jusqu’en bas puis coche la case d’acceptation.');
+      elements.rulesBox.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return;
+    }
+
     setBusy(true);
     show('warn', 'Envoi en cours...');
 
@@ -251,6 +348,7 @@
       phone: data.phone,
       email: data.email,
       genderPreference: data.genderPreference || 'Indifferent',
+      rulesVersion: RULES_VERSION,
       room: result.room,
       arrival: dateFr(data.arrival),
       departure: dateFr(data.departure),
@@ -282,6 +380,7 @@
         ${receiptRow('Téléphone', receipt.phone || '-')}
         ${receiptRow('Email', receipt.email || '-')}
         ${receiptRow('Chambre homme / femme', receipt.genderPreference || 'Indifferent')}
+        ${receiptRow('Règlement accepté', receipt.rulesAcceptedAt || 'Oui')}
         ${receiptRow('Chambre', receipt.room)}
         ${receiptRow('Arrivée', receipt.arrival)}
         ${receiptRow('Départ', receipt.departure)}
@@ -310,6 +409,9 @@
     elements.email.value = '';
     elements.genderPreference.value = '';
     elements.comment.value = '';
+    elements.rulesAccepted.checked = false;
+    rulesRead = false;
+    updateRulesAcceptance();
     show('ok', 'Nouvelle demande prête.');
     elements.occupant.focus();
   }
@@ -351,6 +453,18 @@
     elements.sendButton.disabled = isBusy;
     elements.checkButton.textContent = isBusy ? 'Verification...' : 'Verifier';
     elements.sendButton.textContent = isBusy ? 'Envoi...' : 'Envoyer la demande';
+  }
+
+  function updateRulesAcceptance() {
+    const box = elements.rulesBox;
+    const reachedBottom = box.scrollTop + box.clientHeight >= box.scrollHeight - 8;
+    if (reachedBottom) rulesRead = true;
+
+    elements.rulesAccepted.disabled = !rulesRead;
+    elements.rulesAcceptanceBox.classList.toggle('disabled', !rulesRead);
+    elements.rulesHint.textContent = rulesRead
+      ? 'Tu peux maintenant cocher l’acceptation du règlement.'
+      : 'Déroule le règlement jusqu’en bas pour activer la case.';
   }
 
   function show(type, text) {
