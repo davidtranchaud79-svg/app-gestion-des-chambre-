@@ -74,6 +74,14 @@
         </select>
       </div>
       <div>
+        <label for="genderPreference">Chambre homme / femme</label>
+        <select id="genderPreference">
+          <option value="">Indifferent</option>
+          <option value="Homme">Homme</option>
+          <option value="Femme">Femme</option>
+        </select>
+      </div>
+      <div>
         <label for="occupant">Nom du demandeur</label>
         <input id="occupant" autocomplete="name">
       </div>
@@ -118,6 +126,7 @@
     arrival: document.getElementById('arrival'),
     departure: document.getElementById('departure'),
     requestedRoom: document.getElementById('requestedRoom'),
+    genderPreference: document.getElementById('genderPreference'),
     occupant: document.getElementById('occupant'),
     phone: document.getElementById('phone'),
     email: document.getElementById('email'),
@@ -163,6 +172,7 @@
       arrival: elements.arrival.value,
       departure: elements.departure.value,
       requestedRoom: elements.requestedRoom.value,
+      genderPreference: elements.genderPreference.value,
       occupant: elements.occupant.value.trim(),
       phone: elements.phone.value.trim(),
       email: elements.email.value.trim(),
@@ -240,6 +250,7 @@
       occupant: data.occupant,
       phone: data.phone,
       email: data.email,
+      genderPreference: data.genderPreference || 'Indifferent',
       room: result.room,
       arrival: dateFr(data.arrival),
       departure: dateFr(data.departure),
@@ -270,6 +281,7 @@
         ${receiptRow('Demandeur', receipt.occupant)}
         ${receiptRow('Téléphone', receipt.phone || '-')}
         ${receiptRow('Email', receipt.email || '-')}
+        ${receiptRow('Chambre homme / femme', receipt.genderPreference || 'Indifferent')}
         ${receiptRow('Chambre', receipt.room)}
         ${receiptRow('Arrivée', receipt.arrival)}
         ${receiptRow('Départ', receipt.departure)}
@@ -296,6 +308,7 @@
     elements.occupant.value = '';
     elements.phone.value = '';
     elements.email.value = '';
+    elements.genderPreference.value = '';
     elements.comment.value = '';
     show('ok', 'Nouvelle demande prête.');
     elements.occupant.focus();
