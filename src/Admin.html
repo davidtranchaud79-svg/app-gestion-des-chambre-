@@ -338,7 +338,7 @@
             ${items.map((item) => `
               <tr>
                 <td><strong>${safe(item.id)}</strong><br><small>${safe(item.createdAt)}</small></td>
-                <td>${safe(item.occupant)}<br><small>${safe(item.phone || '-')} · ${safe(item.email || '-')}</small></td>
+                <td>${safe(item.occupant)}<br><small>${safe(item.phone || '-')} · ${safe(item.email || '-')}</small>${item.comment ? `<br><small>${safe(item.comment)}</small>` : ''}</td>
                 <td>${safe(item.arrival)} au ${safe(item.departure)}<br><small>${safe(item.nights)} nuit(s)</small></td>
                 <td>${safe(item.room)}</td>
                 <td>${money(item.amount)}</td>
@@ -415,7 +415,7 @@
               <tr>
                 <td><strong>${safe(item.id)}</strong><br><small>${safe(item.createdAt)}</small></td>
                 <td><span class="pill ${statusClass(item.status)}">${safe(item.status)}</span></td>
-                <td>${safe(item.occupant)}<br><small>${safe(item.phone || '-')} · ${safe(item.email || '-')}</small></td>
+                <td>${safe(item.occupant)}<br><small>${safe(item.phone || '-')} · ${safe(item.email || '-')}</small>${item.comment ? `<br><small>${safe(item.comment)}</small>` : ''}</td>
                 <td>${safe(item.arrival)} au ${safe(item.departure)}</td>
                 <td>${safe(item.room)}</td>
                 <td><small>${safe(item.adminDecision || '-')}</small></td>
