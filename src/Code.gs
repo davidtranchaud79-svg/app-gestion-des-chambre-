@@ -103,10 +103,14 @@ function createReservation(payload) {
     const email = clean_(payload.email).toLowerCase();
     const comment = clean_(payload.comment);
     const requestedRoom = clean_(payload.requestedRoom);
+    const genderPreference = clean_(payload.genderPreference);
 
     if (!name) throw new Error('Le nom est obligatoire.');
     if (!phone && !email) throw new Error('Ajoute au moins un téléphone ou un email.');
     if (email && !isValidEmail_(email)) throw new Error('Adresse email invalide.');
+    if (genderPreference && ['Homme', 'Femme', 'Indifférent', 'Indifferent'].indexOf(genderPreference) === -1) {
+      throw new Error('Choix chambre homme / femme invalide.');
+    }
 
     const ss = SpreadsheetApp.openById(CONFIG.spreadsheetId);
     const availability = checkAvailability(payload);
@@ -131,6 +135,11 @@ function createReservation(payload) {
     const nightRate = Number(selected.nightRate || 0);
     const amount = stay.nights * nightRate;
     const publicStatus = 'À valider';
+    const genderLabel = genderPreference || 'Indifférent';
+    const adminComment = [
+      'Chambre homme / femme : ' + genderLabel,
+      comment,
+    ].filter(Boolean).join(' | ');
 
     const requestRow = [
       registryId,
@@ -148,7 +157,7 @@ function createReservation(payload) {
       amount,
       '',
       'Micro-app',
-      comment,
+      adminComment,
       'En attente réception',
       'Non',
       registryId,
@@ -169,6 +178,7 @@ function createReservation(payload) {
       occupant: name,
       phone,
       email,
+      genderPreference: genderLabel,
       room: selected.room,
       arrival: formatFr_(stay.arrival),
       departure: formatFr_(stay.departure),
@@ -183,7 +193,7 @@ function createReservation(payload) {
     const emailWarning = email && !mailResult.ok ? mailResult.error : '';
 
     try {
-      notifyAdminNewReservation_(receipt, comment, emailWarning);
+      notifyAdminNewReservation_(receipt, adminComment, emailWarning);
     } catch (notifyErr) {
       logAdminNotification_('ERREUR_NOTIFICATION', 'warning', registryId, notifyErr.message || String(notifyErr));
     }
@@ -259,6 +269,7 @@ function receiptEmailHtml_(receipt) {
     receiptEmailRow_('Demandeur', receipt.occupant),
     receiptEmailRow_('Téléphone', receipt.phone || '-'),
     receiptEmailRow_('Email', receipt.email || '-'),
+    receiptEmailRow_('Chambre homme / femme', receipt.genderPreference || 'Indifférent'),
     receiptEmailRow_('Chambre', receipt.room),
     receiptEmailRow_('Arrivée', receipt.arrival),
     receiptEmailRow_('Départ', receipt.departure),
@@ -290,6 +301,7 @@ function plainReceiptText_(receipt) {
     'Demandeur : ' + receipt.occupant,
     'Téléphone : ' + (receipt.phone || '-'),
     'Email : ' + (receipt.email || '-'),
+    'Chambre homme / femme : ' + (receipt.genderPreference || 'Indifférent'),
     'Chambre : ' + receipt.room,
     'Arrivée : ' + receipt.arrival,
     'Départ : ' + receipt.departure,
