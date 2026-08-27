@@ -1,16 +1,24 @@
-// Notifications téléphone via OneSignal Web Push.
-// À configurer dans Propriétés du script :
-// ONESIGNAL_REST_API_KEY = clé REST API OneSignal (NE PAS la mettre dans le code)
-
-const ONESIGNAL_APP_ID = 'c1c76342-2445-4ad8-9335-9563c23e9854';
-const ONESIGNAL_ADMIN_URL = 'https://davidtranchaud79-svg.github.io/app-gestion-des-chambre-/admin.html';
+// Notifications téléphone via OneSignal.
+//
+// Propriétés du script à configurer :
+// ONESIGNAL_APP_ID = identifiant de l'application OneSignal
+// ONESIGNAL_REST_API_KEY = clé REST API OneSignal
+//
+// Optionnel :
+// ONESIGNAL_PLAYER_IDS = ids d'appareils OneSignal séparés par des virgules
+// ONESIGNAL_EXTERNAL_USER_IDS = external user ids séparés par des virgules
+// ONESIGNAL_INCLUDED_SEGMENTS = segment OneSignal, par défaut "Subscribed Users"
 
 function setupMobileNotifications() {
   const settings = mobileGetOneSignalSettings_();
-  if (!settings.ok) throw new Error(settings.error);
+  if (!settings.ok) {
+    throw new Error(settings.error);
+  }
 
   const ss = SpreadsheetApp.openById(CONFIG.spreadsheetId);
-  if (typeof ensureAdminSheets_ === 'function') ensureAdminSheets_(ss);
+  if (typeof ensureAdminSheets_ === 'function') {
+    ensureAdminSheets_(ss);
+  }
 
   const sheet = ss.getSheetByName(CONFIG.sheets.adminNotifications);
   const lastRow = sheet ? Math.max(1, sheet.getLastRow()) : 1;
@@ -18,15 +26,23 @@ function setupMobileNotifications() {
 
   installMobileNotificationTrigger();
 
-  const test = mobileSendOneSignal_('Test notification portable', 'Notification portable opérationnelle.', ONESIGNAL_ADMIN_URL);
-  if (!test.ok) throw new Error(test.error || 'Notification portable non envoyée.');
+  const test = mobileSendOneSignal_('Test notification portable', [
+    'Notification OneSignal opérationnelle.',
+    mobileGetAdminUrl_() ? 'Admin : ' + mobileGetAdminUrl_() : '',
+  ]);
+
+  if (!test.ok) {
+    throw new Error(test.error || 'Notification portable non envoyée.');
+  }
 
   return 'Notifications téléphone OneSignal activées. Scan automatique toutes les minutes.';
 }
 
 function installMobileNotificationTrigger() {
   ScriptApp.getProjectTriggers().forEach((trigger) => {
-    if (trigger.getHandlerFunction() === 'mobileScanAndNotify') ScriptApp.deleteTrigger(trigger);
+    if (trigger.getHandlerFunction() === 'mobileScanAndNotify') {
+      ScriptApp.deleteTrigger(trigger);
+    }
   });
 
   ScriptApp.newTrigger('mobileScanAndNotify')
@@ -38,18 +54,29 @@ function installMobileNotificationTrigger() {
 }
 
 function testMobileNotification() {
-  const result = mobileSendOneSignal_('Test notification portable', 'Notification portable opérationnelle.', ONESIGNAL_ADMIN_URL);
-  if (!result.ok) throw new Error(result.error || 'Notification portable non envoyée.');
+  const result = mobileSendOneSignal_('Test notification portable', [
+    'Notification OneSignal opérationnelle.',
+    mobileGetAdminUrl_() ? 'Admin : ' + mobileGetAdminUrl_() : '',
+  ]);
+
+  if (!result.ok) {
+    throw new Error(result.error || 'Notification portable non envoyée.');
+  }
+
   return 'Notification portable OneSignal envoyée.';
 }
 
 function mobileScanAndNotify() {
   const lock = LockService.getScriptLock();
-  if (!lock.tryLock(10000)) return 'Scan mobile déjà en cours.';
+  if (!lock.tryLock(10000)) {
+    return 'Scan mobile déjà en cours.';
+  }
 
   try {
     const ss = SpreadsheetApp.openById(CONFIG.spreadsheetId);
-    if (typeof ensureAdminSheets_ === 'function') ensureAdminSheets_(ss);
+    if (typeof ensureAdminSheets_ === 'function') {
+      ensureAdminSheets_(ss);
+    }
 
     const sheet = ss.getSheetByName(CONFIG.sheets.adminNotifications);
     if (!sheet) return 'Onglet Admin_Notifications introuvable.';
@@ -63,8 +90,13 @@ function mobileScanAndNotify() {
       return 'Aucune notification à traiter.';
     }
 
-    if (lastDone >= lastRow) return 'Aucune nouvelle notification.';
-    if (lastDone < 1 || lastDone > lastRow) lastDone = 1;
+    if (lastDone >= lastRow) {
+      return 'Aucune nouvelle notification.';
+    }
+
+    if (lastDone < 1 || lastDone > lastRow) {
+      lastDone = 1;
+    }
 
     const startRow = Math.max(2, lastDone + 1);
     const values = sheet.getRange(startRow, 1, lastRow - startRow + 1, 6).getValues();
@@ -83,9 +115,12 @@ function mobileScanAndNotify() {
 
       const notification = mobileBuildNotification_(item);
       if (notification) {
-        const result = mobileSendOneSignal_(notification.title, notification.body, ONESIGNAL_ADMIN_URL);
-        if (!result.ok) throw new Error(result.error || 'Notification OneSignal non envoyée.');
-        sheet.getRange(rowNumber, 6).setValue('Push envoyé ' + mobileFormatDateTime_(new Date()));
+        const result = mobileSendOneSignal_(notification.title, notification.lines);
+        if (!result.ok) {
+          throw new Error(result.error || 'Notification OneSignal non envoyée.');
+        }
+
+        sheet.getRange(rowNumber, 6).setValue('Mobile envoyée ' + mobileFormatDateTime_(new Date()));
         sent++;
       }
 
@@ -104,77 +139,141 @@ function mobileBuildNotification_(item) {
   if (type === 'NOUVELLE_RESERVATION') {
     return {
       title: 'Nouvelle réservation à valider',
-      body: mobileNotificationBody_(item),
+      lines: mobileNotificationLines_(item),
     };
   }
 
   if (type === 'ANOMALIES') {
     return {
       title: 'Anomalie réservation détectée',
-      body: mobileNotificationBody_(item),
+      lines: mobileNotificationLines_(item),
     };
   }
 
   if (type === 'ANOMALIE_VALIDATION') {
     return {
       title: 'Blocage validation réservation',
-      body: mobileNotificationBody_(item),
+      lines: mobileNotificationLines_(item),
     };
   }
 
   return null;
 }
 
-function mobileNotificationBody_(item) {
-  return [
-    item.reference ? 'Réf. ' + item.reference : '',
-    item.message ? mobileLimitText_(item.message, 180) : '',
-  ].filter(Boolean).join(' — ');
+function mobileNotificationLines_(item) {
+  const lines = [
+    item.date ? 'Date : ' + mobileFormatDateTime_(item.date) : '',
+    item.level ? 'Niveau : ' + item.level : '',
+    item.reference ? 'Référence : ' + item.reference : '',
+    item.message ? 'Message : ' + mobileLimitText_(item.message, 900) : '',
+  ];
+
+  const adminUrl = mobileGetAdminUrl_();
+  if (adminUrl) lines.push('Admin : ' + adminUrl);
+
+  return lines.filter(Boolean);
 }
 
-function mobileSendOneSignal_(title, body, url) {
+function mobileSendOneSignal_(title, lines) {
   const settings = mobileGetOneSignalSettings_();
   if (!settings.ok) {
     mobileLog_('warning', settings.error);
     return { ok: false, skipped: true, error: settings.error };
   }
 
+  const text = mobileOneSignalText_(title, lines);
   const payload = {
-    app_id: ONESIGNAL_APP_ID,
-    included_segments: ['Subscribed Users'],
-    headings: { en: title, fr: title },
-    contents: { en: body || title, fr: body || title },
-    url: url || ONESIGNAL_ADMIN_URL,
+    app_id: settings.appId,
+    headings: {
+      en: title,
+      fr: title,
+    },
+    contents: {
+      en: text,
+      fr: text,
+    },
+    url: mobileGetAdminUrl_() || undefined,
   };
 
-  const response = UrlFetchApp.fetch('https://api.onesignal.com/notifications?c=push', {
+  Object.assign(payload, mobileOneSignalTarget_(settings));
+
+  const response = UrlFetchApp.fetch('https://onesignal.com/api/v1/notifications', {
     method: 'post',
     contentType: 'application/json',
-    headers: {
-      Authorization: 'Key ' + settings.apiKey,
-    },
     muteHttpExceptions: true,
+    headers: {
+      Authorization: 'Basic ' + settings.restApiKey,
+    },
     payload: JSON.stringify(payload),
   });
 
   const code = response.getResponseCode();
-  const text = response.getContentText();
+  const body = response.getContentText();
   if (code < 200 || code >= 300) {
-    const error = 'OneSignal erreur HTTP ' + code + ' : ' + text;
+    const error = 'OneSignal erreur HTTP ' + code + ' : ' + body;
     mobileLog_('warning', error);
     return { ok: false, error };
   }
 
-  mobileLog_('info', 'Notification portable OneSignal envoyée.');
-  return { ok: true, response: text };
+  mobileLog_('info', 'Notification portable OneSignal envoyée : ' + body);
+  return { ok: true, response: body };
+}
+
+function mobileOneSignalTarget_(settings) {
+  if (settings.playerIds.length) {
+    return { include_player_ids: settings.playerIds };
+  }
+
+  if (settings.externalUserIds.length) {
+    return { include_external_user_ids: settings.externalUserIds };
+  }
+
+  return { included_segments: settings.includedSegments };
 }
 
 function mobileGetOneSignalSettings_() {
-  const apiKey = mobileClean_(PropertiesService.getScriptProperties().getProperty('ONESIGNAL_REST_API_KEY'));
-  if (!apiKey) {
-    return { ok: false, error: 'ONESIGNAL_REST_API_KEY absent dans Propriétés du script.' };
+  const props = PropertiesService.getScriptProperties();
+  const appId = mobileClean_(props.getProperty('ONESIGNAL_APP_ID'));
+  const restApiKey = mobileClean_(props.getProperty('ONESIGNAL_REST_API_KEY'));
+  const playerIds = mobileSplitList_(props.getProperty('ONESIGNAL_PLAYER_IDS'));
+  const externalUserIds = mobileSplitList_(props.getProperty('ONESIGNAL_EXTERNAL_USER_IDS'));
+  const includedSegments = mobileSplitList_(props.getProperty('ONESIGNAL_INCLUDED_SEGMENTS'));
+
+  if (!appId || !restApiKey) {
+    return {
+      ok: false,
+      error: 'ONESIGNAL_APP_ID ou ONESIGNAL_REST_API_KEY absent dans Propriétés du script.',
+    };
   }
-  return { ok: true, apiKey };
+
+  return {
+    ok: true,
+    appId,
+    restApiKey,
+    playerIds,
+    externalUserIds,
+    includedSegments: includedSegments.length ? includedSegments : ['Subscribed Users'],
+  };
+}
+
+function mobileOneSignalText_(title, lines) {
+  return ['Gestion chambre - ' + title, '']
+    .concat((lines || []).filter(Boolean))
+    .join('\n');
+}
+
+function mobileGetAdminUrl_() {
+  if (typeof getAdminUrl_ === 'function') {
+    return getAdminUrl_();
+  }
+
+  try {
+    const url = ScriptApp.getService().getUrl();
+    if (!url) return '';
+    return url + (url.indexOf('?') === -1 ? '?view=admin' : '&view=admin');
+  } catch (e) {
+    return '';
+  }
 }
 
 function mobileLog_(level, message) {
@@ -182,7 +281,16 @@ function mobileLog_(level, message) {
     if (typeof logAdminNotification_ === 'function') {
       logAdminNotification_('MOBILE_NOTIFICATION', level, '', message);
     }
-  } catch (e) {}
+  } catch (e) {
+    // Évite qu'une erreur de journalisation bloque la réservation.
+  }
+}
+
+function mobileSplitList_(value) {
+  return mobileClean_(value)
+    .split(',')
+    .map(function(item) { return mobileClean_(item); })
+    .filter(Boolean);
 }
 
 function mobileLimitText_(value, maxLength) {
