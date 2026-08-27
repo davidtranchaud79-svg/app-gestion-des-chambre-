@@ -27,6 +27,23 @@ jobs:
             echo "ready=true" >> "$GITHUB_OUTPUT"
           fi
 
+      - name: Keep admin logo distinct from public bed logo
+        if: steps.secrets.outputs.ready == 'true'
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import base64
+
+          p = Path('src/Admin.html')
+          s = p.read_text(encoding='utf-8')
+          old = base64.b64decode('PHN2ZyB2aWV3Qm94PSIwIDAgMTIwIDEyMCI+PHBhdGggZD0iTTIxIDUwIDYwIDIxbDM5IDI5IiBmaWxsPSJub25lIiBzdHJva2U9IiM1YTBkMGQiIHN0cm9rZS13aWR0aD0iNiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIi8+PHBhdGggZD0iTTI5IDQ4djQzaDYyVjQ4IiBmaWxsPSJub25lIiBzdHJva2U9IiM1YTBkMGQiIHN0cm9rZS13aWR0aD0iNSIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIvPjxwYXRoIGQ9Ik0zOCA3NGg0OHYxNkgzOHoiIGZpbGw9IiNmOGYzZTgiIHN0cm9rZT0iIzVhMGQwZCIgc3Ryb2tlLXdpZHRoPSI0Ii8+PHBhdGggZD0iTTM4IDY3djIzTTg2IDY1djI1TTQ0IDY4aDE2YzYgMCA5IDMgOSA2SDQ0eiIgZmlsbD0iI2M3YTc2NiIgc3Ryb2tlPSIjNWEwZDBkIiBzdHJva2Utd2lkdGg9IjQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiLz48cGF0aCBkPSJNMzYgOTZjMTIgNiAzNiA4IDUyIDAiIGZpbGw9Im5vbmUiIHN0cm9rZT0iI2M3YTc2NiIgc3Ryb2tlLXdpZHRoPSI0IiBzdHJva2UtbGluZWNhcD0icm91bmQiLz48L3N2Zz4=').decode('utf-8')
+          new = base64.b64decode('PHN2ZyB2aWV3Qm94PSIwIDAgMTIwIDEyMCIgcm9sZT0iaW1nIiBhcmlhLWxhYmVsPSJBZG1pbmlzdHJhdGlvbiBMYSBDYXllbm5lIGRlIFBhcmlzIj48cGF0aCBkPSJNMjAgNDkgNjAgMjBsNDAgMjkiIGZpbGw9Im5vbmUiIHN0cm9rZT0iIzVhMGQwZCIgc3Ryb2tlLXdpZHRoPSI2IiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiLz48cGF0aCBkPSJNMjkgNDd2NDZoNjJWNDciIGZpbGw9Im5vbmUiIHN0cm9rZT0iIzVhMGQwZCIgc3Ryb2tlLXdpZHRoPSI1IiBzdHJva2UtbGluZWpvaW49InJvdW5kIi8+PHBhdGggZD0iTTYwIDQ4YzEyIDggMjAgMTAgMjcgMTF2MTVjMCAxNS0xMCAyNS0yNyAzMi0xNy03LTI3LTE3LTI3LTMyVjU5YzctMSAxNS0zIDI3LTExeiIgZmlsbD0iI2Y4ZjNlOCIgc3Ryb2tlPSIjYzdhNzY2IiBzdHJva2Utd2lkdGg9IjQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiLz48Y2lyY2xlIGN4PSI2MCIgY3k9IjcyIiByPSI4IiBmaWxsPSJub25lIiBzdHJva2U9IiM1YTBkMGQiIHN0cm9rZS13aWR0aD0iNCIvPjxwYXRoIGQ9Ik02MCA4MHYxMSIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjNWEwZDBkIiBzdHJva2Utd2lkdGg9IjQiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPjxwYXRoIGQ9Ik00NyA5OWM4IDQgMTggNiAyNiAwIiBmaWxsPSJub25lIiBzdHJva2U9IiNjN2E3NjYiIHN0cm9rZS13aWR0aD0iNCIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+PC9zdmc+').decode('utf-8')
+          count = s.count(old)
+          if count != 2:
+            raise SystemExit(f'Expected 2 admin bed logos, found {count}')
+          p.write_text(s.replace(old, new), encoding='utf-8')
+          PY
+
       - name: Setup Node
         if: steps.secrets.outputs.ready == 'true'
         uses: actions/setup-node@v4
