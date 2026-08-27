@@ -18,8 +18,8 @@ const CONFIG = {
 const ACCESS_DEFAULTS = {
   mailboxCode: '4570',
   keyBoxCode: '7045',
-  badgeNotice: 'Le badge permet d’ouvrir la porte. Merci de le remettre aussitôt dans la boîte à clé pour les prochains.',
-  receiptMessage: 'Merci pour votre réservation. La chambre sera préparée pour votre arrivée. En cas de changement ou de retard, merci de prévenir la réception le plus tôt possible.',
+  badgeNotice: 'La clef (badge électronique) de la porte d’entrée est dans la boîte aux lettres à l’entrée de la Cayenne. Placer le badge sur la porte, tirer fort puis pousser immédiatement la porte.',
+  receiptMessage: 'Votre réservation est confirmée. Voici les informations utiles pour votre arrivée. En cas de changement ou de retard, merci de prévenir la réception le plus tôt possible.',
 };
 
 const RULES_VERSION = 'reglement-lit-passant-2026-08-27';
@@ -289,7 +289,7 @@ function receiptEmailHtml_(receipt) {
     receiptEmailRow_('Tarif nuit', moneyText_(receipt.nightRate)),
     receiptEmailRow_('Montant prévisionnel', moneyText_(receipt.amount)),
     '</table>',
-    receiptMessageHtml_(),
+    preReservationMessageHtml_(),
     shouldShowAccessInstructions_(receipt.status) ? accessInstructionsHtml_() : '',
     '<p style="margin-top:16px;color:#667085">' + escapeHtml_(receipt.paymentNotice || 'Validation par la réception.') + '</p>',
     '</div>',
@@ -322,7 +322,7 @@ function plainReceiptText_(receipt) {
     'Tarif nuit : ' + moneyText_(receipt.nightRate),
     'Montant prévisionnel : ' + moneyText_(receipt.amount),
     '',
-    receiptMessageText_(),
+    preReservationMessageText_(),
     '',
     shouldShowAccessInstructions_(receipt.status) ? accessInstructionsText_() : '',
     '',
@@ -338,6 +338,16 @@ function receiptMessageHtml_() {
 
 function receiptMessageText_() {
   return getAccessInfo_().receiptMessage;
+}
+
+function preReservationMessageHtml_() {
+  return '<p style="margin-top:16px;padding:12px;border-radius:8px;background:#f8fafc;border:1px solid #e2e8f0;color:#334155">' +
+    escapeHtml_(preReservationMessageText_()) +
+    '</p>';
+}
+
+function preReservationMessageText_() {
+  return 'Votre demande est enregistrée comme pré-réservation. Vous recevrez un mail de confirmation après validation par la réception, avec les instructions pour ouvrir la porte.';
 }
 
 function accessInstructionsHtml_() {
@@ -388,9 +398,15 @@ function getAccessInfo_() {
   return {
     mailboxCode: clean_(props.getProperty('MAILBOX_CODE')) || ACCESS_DEFAULTS.mailboxCode,
     keyBoxCode: clean_(props.getProperty('KEYBOX_CODE')) || ACCESS_DEFAULTS.keyBoxCode,
-    badgeNotice: clean_(props.getProperty('BADGE_NOTICE')) || ACCESS_DEFAULTS.badgeNotice,
+    badgeNotice: normalizeBadgeNotice_(clean_(props.getProperty('BADGE_NOTICE')) || ACCESS_DEFAULTS.badgeNotice),
     receiptMessage: clean_(props.getProperty('RECEIPT_MESSAGE')) || ACCESS_DEFAULTS.receiptMessage,
   };
+}
+
+function normalizeBadgeNotice_(notice) {
+  const oldNotice = 'Le badge permet d’ouvrir la porte. Merci de le remettre aussitôt dans la boîte à clé pour les prochains.';
+  if (!notice || notice === oldNotice) return ACCESS_DEFAULTS.badgeNotice;
+  return notice;
 }
 
 function selectAvailableRoom_(rooms, requestedRoom) {
