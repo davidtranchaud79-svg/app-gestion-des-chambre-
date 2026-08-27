@@ -22,6 +22,8 @@ const ACCESS_DEFAULTS = {
   receiptMessage: 'Merci pour votre réservation. La chambre sera préparée pour votre arrivée. En cas de changement ou de retard, merci de prévenir la réception le plus tôt possible.',
 };
 
+const RULES_VERSION = 'reglement-lit-passant-2026-08-27';
+
 function doGet(e) {
   const params = (e && e.parameter) || {};
   const view = norm_(params.view || params.page || '');
@@ -104,12 +106,17 @@ function createReservation(payload) {
     const comment = clean_(payload.comment);
     const requestedRoom = clean_(payload.requestedRoom);
     const genderPreference = clean_(payload.genderPreference);
+    const rulesAccepted = payload.rulesAccepted === true || clean_(payload.rulesAccepted) === 'true';
+    const rulesVersion = clean_(payload.rulesVersion) || RULES_VERSION;
 
     if (!name) throw new Error('Le nom est obligatoire.');
     if (!phone && !email) throw new Error('Ajoute au moins un téléphone ou un email.');
     if (email && !isValidEmail_(email)) throw new Error('Adresse email invalide.');
     if (genderPreference && ['Homme', 'Femme', 'Indifférent', 'Indifferent'].indexOf(genderPreference) === -1) {
       throw new Error('Choix chambre homme / femme invalide.');
+    }
+    if (!rulesAccepted) {
+      throw new Error('Le règlement doit être lu et accepté avant d’envoyer la demande.');
     }
 
     const ss = SpreadsheetApp.openById(CONFIG.spreadsheetId);
@@ -136,8 +143,10 @@ function createReservation(payload) {
     const amount = stay.nights * nightRate;
     const publicStatus = 'À valider';
     const genderLabel = genderPreference || 'Indifférent';
+    const rulesAcceptedText = 'Règlement accepté le ' + formatDateTimeFr_(createdAt) + ' (' + rulesVersion + ')';
     const adminComment = [
       'Chambre homme / femme : ' + genderLabel,
+      rulesAcceptedText,
       comment,
     ].filter(Boolean).join(' | ');
 
@@ -179,6 +188,8 @@ function createReservation(payload) {
       phone,
       email,
       genderPreference: genderLabel,
+      rulesAcceptedAt: formatDateTimeFr_(createdAt),
+      rulesVersion,
       room: selected.room,
       arrival: formatFr_(stay.arrival),
       departure: formatFr_(stay.departure),
@@ -270,6 +281,7 @@ function receiptEmailHtml_(receipt) {
     receiptEmailRow_('Téléphone', receipt.phone || '-'),
     receiptEmailRow_('Email', receipt.email || '-'),
     receiptEmailRow_('Chambre homme / femme', receipt.genderPreference || 'Indifférent'),
+    receiptEmailRow_('Règlement accepté', receipt.rulesAcceptedAt || 'Oui'),
     receiptEmailRow_('Chambre', receipt.room),
     receiptEmailRow_('Arrivée', receipt.arrival),
     receiptEmailRow_('Départ', receipt.departure),
@@ -302,6 +314,7 @@ function plainReceiptText_(receipt) {
     'Téléphone : ' + (receipt.phone || '-'),
     'Email : ' + (receipt.email || '-'),
     'Chambre homme / femme : ' + (receipt.genderPreference || 'Indifférent'),
+    'Règlement accepté : ' + (receipt.rulesAcceptedAt || 'Oui'),
     'Chambre : ' + receipt.room,
     'Arrivée : ' + receipt.arrival,
     'Départ : ' + receipt.departure,
