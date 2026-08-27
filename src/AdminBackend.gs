@@ -39,30 +39,19 @@ function testAdminNotification() {
 }
 
 function installAdminTriggers() {
+  let removed = 0;
   ScriptApp.getProjectTriggers().forEach((trigger) => {
     if (trigger.getHandlerFunction() === 'adminScanAndNotifyAnomalies') {
       ScriptApp.deleteTrigger(trigger);
+      removed++;
     }
   });
 
-  ScriptApp.newTrigger('adminScanAndNotifyAnomalies')
-    .timeBased()
-    .everyHours(1)
-    .create();
-
-  return 'Déclencheur installé : scan anomalies toutes les heures.';
+  return 'Alertes anomalies désactivées. Déclencheurs supprimés : ' + removed + '.';
 }
 
 function adminScanAndNotifyAnomalies() {
-  const ss = SpreadsheetApp.openById(CONFIG.spreadsheetId);
-  const anomalies = scanReservationAnomalies_(ss);
-  writeAdminAnomalies_(ss, anomalies);
-
-  if (anomalies.length) {
-    notifyAdminAnomalies_(anomalies, true);
-  }
-
-  return anomalies.length + ' anomalie(s) détectée(s).';
+  return 'Alertes anomalies désactivées.';
 }
 
 function repairMissingPublicReservationsInRegistry() {
@@ -124,8 +113,7 @@ function getAdminDashboard(token) {
 
     const requests = getAdminRequests_(ss);
     const rooms = getAdminRoomDashboard_(ss);
-    const anomalies = scanReservationAnomalies_(ss, requests, rooms);
-    writeAdminAnomalies_(ss, anomalies);
+    const anomalies = [];
 
     const pending = requests.filter(adminIsPendingRequest_);
     const occupied = rooms.filter((room) => room.status === 'Occupée' || room.status === 'Rotation du jour');
@@ -140,7 +128,7 @@ function getAdminDashboard(token) {
       adminEmailConfigured: Boolean(getAdminEmail_()),
       stats: {
         pending: pending.length,
-        anomalies: anomalies.length,
+        anomalies: 0,
         roomsTotal: rooms.length,
         roomsFree: free.length,
         roomsOccupied: occupied.length,
@@ -150,7 +138,7 @@ function getAdminDashboard(token) {
       pending: pending.slice(0, 60).map(adminRequestForClient_),
       requests: requests.slice(0, 100).map(adminRequestForClient_),
       rooms: rooms.map(adminRoomForClient_),
-      anomalies: anomalies.slice(0, 100).map(adminAnomalyForClient_),
+      anomalies: [],
     };
   } catch (err) {
     return {
