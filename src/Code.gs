@@ -15,6 +15,13 @@ const CONFIG = {
   registryCols: 25,
 };
 
+const ACCESS_DEFAULTS = {
+  mailboxCode: '4570',
+  keyBoxCode: '7045',
+  badgeNotice: 'Le badge permet d’ouvrir la porte. Merci de le remettre aussitôt dans la boîte à clé pour les prochains.',
+  receiptMessage: 'Merci pour votre réservation. La chambre sera préparée pour votre arrivée. En cas de changement ou de retard, merci de prévenir la réception le plus tôt possible.',
+};
+
 function doGet(e) {
   const params = (e && e.parameter) || {};
   const view = norm_(params.view || params.page || '');
@@ -121,17 +128,9 @@ function createReservation(payload) {
 
     const registryId = createRegistryId_();
     const createdAt = new Date();
-    const channel = email ? 'Mail' : 'Téléphone';
     const nightRate = Number(selected.nightRate || 0);
     const amount = stay.nights * nightRate;
     const publicStatus = 'À valider';
-    const registryStatus = 'À valider';
-    const notes = [
-      comment,
-      'Demande micro-app',
-      email ? 'Email : ' + email : '',
-      'En attente validation réception',
-    ].filter(Boolean).join(' | ');
 
     const requestRow = [
       registryId,
@@ -156,39 +155,17 @@ function createReservation(payload) {
       selected.reason || '',
     ];
 
-    const registryRow = buildRegistryRow_({
-      id: registryId,
-      segment: 'Court séjour',
-      room: selected.room,
-      occupant: name,
-      organisme: '',
-      phone,
-      arrival: stay.arrival,
-      departure: stay.departure,
-      unit: 'Nuit',
-      quantity: stay.nights,
-      unitRate: nightRate,
-      amount,
-      paid: 0,
-      status: registryStatus,
-      channel,
-      notes,
-      createdAt,
-    });
-
     const requestTargetRow = firstEmptyRow_(requestSheet, CONFIG.requestStartRow, 1);
     requestSheet.getRange(requestTargetRow, 1, 1, CONFIG.requestCols).setValues([requestRow]);
 
-    const registryTargetRow = firstEmptyRow_(registrySheet, CONFIG.registryStartRow, 1);
-    registrySheet.getRange(registryTargetRow, 1, 1, CONFIG.registryCols).setValues([registryRow]);
-
     refreshRegistryOperationalFlags_(ss);
     repairRoomStatusFormulas_(ss);
+    if (typeof refreshVisualPlanning_ === 'function') refreshVisualPlanning_(ss);
     SpreadsheetApp.flush();
 
     const receipt = {
       id: registryId,
-      status: registryStatus,
+      status: publicStatus,
       occupant: name,
       phone,
       email,
@@ -219,14 +196,14 @@ function createReservation(payload) {
       room: selected.room,
       nights: stay.nights,
       amount,
-      status: registryStatus,
+      status: publicStatus,
       emailSent: Boolean(email && mailResult.ok),
       emailWarning,
       message: emailWarning
-        ? 'Demande enregistrée et intégrée au Registre. Reçu affiché, mais email non envoyé : ' + emailWarning
+        ? 'Demande enregistrée et envoyée à l’admin. Reçu affiché, mais email non envoyé : ' + emailWarning
         : email
-          ? 'Demande enregistrée et intégrée au Registre. Reçu envoyé par email.'
-          : 'Demande enregistrée et intégrée au Registre. Reçu disponible ci-dessous.',
+          ? 'Demande enregistrée et envoyée à l’admin. Reçu envoyé par email.'
+          : 'Demande enregistrée et envoyée à l’admin. Reçu disponible ci-dessous.',
       receipt,
     };
   } catch (err) {
@@ -245,6 +222,7 @@ function repairReservationSystem() {
   const ss = SpreadsheetApp.openById(CONFIG.spreadsheetId);
   refreshRegistryOperationalFlags_(ss);
   repairRoomStatusFormulas_(ss);
+  if (typeof refreshVisualPlanning_ === 'function') refreshVisualPlanning_(ss);
   return 'Système réservation recâblé : Registre recalculé et Chambres reliées au Registre complet.';
 }
 
@@ -290,6 +268,7 @@ function receiptEmailHtml_(receipt) {
     receiptEmailRow_('Tarif nuit', moneyText_(receipt.nightRate)),
     receiptEmailRow_('Montant prévisionnel', moneyText_(receipt.amount)),
     '</table>',
+    receiptMessageHtml_(),
     shouldShowAccessInstructions_(receipt.status) ? accessInstructionsHtml_() : '',
     '<p style="margin-top:16px;color:#667085">' + escapeHtml_(receipt.paymentNotice || 'Validation par la réception.') + '</p>',
     '</div>',
@@ -320,10 +299,22 @@ function plainReceiptText_(receipt) {
     'Tarif nuit : ' + moneyText_(receipt.nightRate),
     'Montant prévisionnel : ' + moneyText_(receipt.amount),
     '',
+    receiptMessageText_(),
+    '',
     shouldShowAccessInstructions_(receipt.status) ? accessInstructionsText_() : '',
     '',
     receipt.paymentNotice || 'Validation par la réception.',
   ].filter(function(line) { return line !== null && line !== undefined; }).join('\n');
+}
+
+function receiptMessageHtml_() {
+  const message = getAccessInfo_().receiptMessage;
+  if (!message) return '';
+  return '<p style="margin-top:16px;padding:12px;border-radius:8px;background:#f8fafc;border:1px solid #e2e8f0;color:#334155">' + escapeHtml_(message) + '</p>';
+}
+
+function receiptMessageText_() {
+  return getAccessInfo_().receiptMessage;
 }
 
 function accessInstructionsHtml_() {
@@ -372,9 +363,10 @@ function shouldShowAccessInstructions_(status) {
 function getAccessInfo_() {
   const props = PropertiesService.getScriptProperties();
   return {
-    mailboxCode: clean_(props.getProperty('MAILBOX_CODE')),
-    keyBoxCode: clean_(props.getProperty('KEYBOX_CODE')),
-    badgeNotice: clean_(props.getProperty('BADGE_NOTICE')) || 'Le badge permet d’ouvrir la porte. Merci de le remettre aussitôt dans la boîte à clé pour les prochains.',
+    mailboxCode: clean_(props.getProperty('MAILBOX_CODE')) || ACCESS_DEFAULTS.mailboxCode,
+    keyBoxCode: clean_(props.getProperty('KEYBOX_CODE')) || ACCESS_DEFAULTS.keyBoxCode,
+    badgeNotice: clean_(props.getProperty('BADGE_NOTICE')) || ACCESS_DEFAULTS.badgeNotice,
+    receiptMessage: clean_(props.getProperty('RECEIPT_MESSAGE')) || ACCESS_DEFAULTS.receiptMessage,
   };
 }
 
