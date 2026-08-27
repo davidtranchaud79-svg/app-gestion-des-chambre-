@@ -141,6 +141,28 @@
       font-weight: 700;
     }
 
+    .secondary-links {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 10px;
+      margin-top: 16px;
+    }
+
+    .secondary-link {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 42px;
+      padding: 0 16px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      color: var(--blue);
+      background: #fff;
+      font-weight: 800;
+      text-decoration: none;
+    }
+
     @media (max-width: 760px) {
       .page {
         padding: 22px;
@@ -202,6 +224,11 @@
         En cas de souci avec le bouton :
         <a href="https://script.google.com/macros/s/AKfycbybIF7v0Mz5Jah8Z9pxLPL37_kXKdSMsIqz_4Q3ZxRzJ6fxLD6iofUPnXB-ItTTNy69OA/exec" target="_blank" rel="noopener">ouvrir le formulaire directement</a>
       </p>
+
+      <div class="secondary-links">
+        <a class="secondary-link" href="notifications/">Activer les notifications portable</a>
+        <a class="secondary-link" href="notifications.html">Lien de secours notifications</a>
+      </div>
     </section>
   </main>
 </body>
