@@ -16,6 +16,13 @@
       --ok: #166534;
       --warn: #92400e;
       --bad: #991b1b;
+      --plan-free: #70AD47;
+      --plan-occupied: #C00000;
+      --plan-arrival: #ED7D31;
+      --plan-departure: #2F75B5;
+      --plan-rotation: #7030A0;
+      --plan-closed: #7F8C8D;
+      --plan-pending: #F59E0B;
     }
 
     * { box-sizing: border-box; }
@@ -58,6 +65,29 @@
     .pill.pending { background: #fff7ed; color: var(--warn); }
     .pill.ok { background: #ecfdf3; color: var(--ok); }
     .pill.bad { background: #fee2e2; color: var(--bad); }
+    .plan-header { display: flex; justify-content: space-between; gap: 12px; align-items: flex-start; flex-wrap: wrap; }
+    .plan-legend { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+    .legend-item { display: inline-flex; align-items: center; gap: 6px; color: var(--muted); font-size: 12px; font-weight: 700; }
+    .legend-dot { width: 13px; height: 13px; border-radius: 4px; display: inline-block; }
+    .legend-dot.free { background: var(--plan-free); }
+    .legend-dot.occupied { background: var(--plan-occupied); }
+    .legend-dot.arrival { background: var(--plan-arrival); }
+    .legend-dot.departure { background: var(--plan-departure); }
+    .legend-dot.rotation { background: var(--plan-rotation); }
+    .legend-dot.closed { background: var(--plan-closed); }
+    .plan-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+    .plan-tile { min-height: 116px; border-radius: 8px; padding: 12px; color: #fff; display: flex; flex-direction: column; justify-content: space-between; box-shadow: inset 0 0 0 1px rgba(255,255,255,.28); }
+    .plan-tile.free { background: var(--plan-free); }
+    .plan-tile.occupied { background: var(--plan-occupied); }
+    .plan-tile.arrival { background: var(--plan-arrival); }
+    .plan-tile.departure { background: var(--plan-departure); }
+    .plan-tile.rotation { background: var(--plan-rotation); }
+    .plan-tile.closed { background: var(--plan-closed); }
+    .plan-tile.pending { background: var(--plan-pending); }
+    .plan-tile strong { display: block; font-size: 18px; letter-spacing: .02em; }
+    .plan-room { font-size: 13px; font-weight: 800; opacity: .95; text-transform: uppercase; }
+    .plan-occupant { min-height: 18px; font-size: 13px; line-height: 1.3; opacity: .96; }
+    .plan-type { font-size: 12px; opacity: .82; }
     .rooms { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
     .room { border: 1px solid var(--line); border-radius: 8px; padding: 12px; background: #fff; }
     .room strong { display: block; }
@@ -70,12 +100,13 @@
     @media (max-width: 900px) {
       header, .layout { display: block; }
       .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .plan-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       .rooms { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       .top-actions { justify-content: flex-start; margin-top: 10px; }
     }
     @media (max-width: 560px) {
       main { padding: 14px; }
-      .stats, .rooms, .login-actions { grid-template-columns: 1fr; }
+      .stats, .plan-grid, .rooms, .login-actions { grid-template-columns: 1fr; }
       table { min-width: 680px; }
     }
   </style>
@@ -113,6 +144,24 @@
       <div class="stat"><span>Chambres libres</span><strong id="statFree">0</strong></div>
       <div class="stat"><span>Occupées</span><strong id="statOccupied">0</strong></div>
     </div>
+
+    <section>
+      <div class="plan-header">
+        <div>
+          <h2>Plan des chambres</h2>
+          <p>Vue rapide avec les mêmes couleurs que le planning du Sheet.</p>
+        </div>
+        <div class="plan-legend" aria-label="Légende du plan des chambres">
+          <span class="legend-item"><span class="legend-dot free"></span>Libre</span>
+          <span class="legend-item"><span class="legend-dot occupied"></span>Occupée</span>
+          <span class="legend-item"><span class="legend-dot arrival"></span>Arrivée</span>
+          <span class="legend-item"><span class="legend-dot departure"></span>Départ</span>
+          <span class="legend-item"><span class="legend-dot rotation"></span>Rotation</span>
+          <span class="legend-item"><span class="legend-dot closed"></span>Fermée</span>
+        </div>
+      </div>
+      <div id="roomPlanBox" class="plan-grid"></div>
+    </section>
 
     <div class="layout">
       <section>
@@ -161,6 +210,7 @@
     statOccupied: document.getElementById('statOccupied'),
     pendingBox: document.getElementById('pendingBox'),
     anomaliesBox: document.getElementById('anomaliesBox'),
+    roomPlanBox: document.getElementById('roomPlanBox'),
     roomsBox: document.getElementById('roomsBox'),
     historyBox: document.getElementById('historyBox'),
     refreshButton: document.getElementById('refreshButton'),
@@ -256,7 +306,7 @@
       .withSuccessHandler((result) => {
         setDashboardBusy(false);
         if (!result || !result.ok) {
-          showDashboardMessage('bad', 'Dashboard indisponible.');
+          showDashboardMessage('bad', result && result.error ? result.error : 'Dashboard indisponible.');
           return;
         }
         renderDashboard(result);
@@ -279,6 +329,7 @@
 
     renderPending(data.pending || []);
     renderAnomalies(data.anomalies || []);
+    renderRoomPlan(data.rooms || []);
     renderRooms(data.rooms || []);
     renderHistory(data.requests || []);
     notifyIfNeeded(stats.pending || 0, stats.anomalies || 0);
@@ -339,6 +390,25 @@
         <small>${safe(item.reference || '-')} · ${safe(item.room || '-')}</small>
       </div>
     `).join('');
+  }
+
+  function renderRoomPlan(items) {
+    if (!items.length) {
+      el.roomPlanBox.innerHTML = '<div class="empty">Aucune chambre trouvée.</div>';
+      return;
+    }
+
+    el.roomPlanBox.innerHTML = items.map((room) => {
+      const state = roomPlanState(room);
+      return `
+        <div class="plan-tile ${state.className}">
+          <span class="plan-room">Chambre ${safe(room.room)}</span>
+          <strong>${safe(state.label)}</strong>
+          <span class="plan-occupant">${safe(room.occupant || state.emptyText)}</span>
+          <span class="plan-type">${safe(room.type || 'Chambre')}</span>
+        </div>
+      `;
+    }).join('');
   }
 
   function renderRooms(items) {
@@ -474,6 +544,39 @@
     if (normalized.includes('refus') || normalized.includes('anomal') || normalized.includes('ferm')) return 'bad';
     if (normalized.includes('attente') || normalized.includes('valider') || normalized.includes('rotation')) return 'pending';
     return '';
+  }
+
+  function roomPlanState(room) {
+    const status = normalizeText(room && room.status);
+    const movement = normalizeText(room && room.movement);
+    const manual = normalizeText(room && room.manualStatus);
+
+    if (manual.includes('hors service') || status.includes('fermee')) {
+      return { className: 'closed', label: 'HORS SERVICE', emptyText: 'Maintenance' };
+    }
+    if (movement.includes('rotation') || status.includes('rotation')) {
+      return { className: 'rotation', label: 'ROTATION', emptyText: 'Rotation du jour' };
+    }
+    if (movement.includes('arrivee')) {
+      return { className: 'arrival', label: 'ARRIVÉE', emptyText: 'Arrivée du jour' };
+    }
+    if (movement.includes('depart')) {
+      return { className: 'departure', label: 'DÉPART', emptyText: 'Départ du jour' };
+    }
+    if (status.includes('occupee')) {
+      return { className: 'occupied', label: 'OCCUPÉE', emptyText: 'Occupée' };
+    }
+    if (status.includes('valider') || status.includes('attente')) {
+      return { className: 'pending', label: 'À VALIDER', emptyText: 'Validation admin' };
+    }
+    return { className: 'free', label: 'LIBRE', emptyText: 'Disponible' };
+  }
+
+  function normalizeText(value) {
+    return String(value || '')
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '');
   }
 
   function money(value) {
