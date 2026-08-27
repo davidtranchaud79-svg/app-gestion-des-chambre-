@@ -333,7 +333,12 @@ function plainReceiptText_(receipt) {
 function receiptMessageHtml_() {
   const message = getAccessInfo_().receiptMessage;
   if (!message) return '';
-  return '<p style="margin-top:16px;padding:12px;border-radius:8px;background:#f8fafc;border:1px solid #e2e8f0;color:#334155">' + escapeHtml_(message) + '</p>';
+  return [
+    '<div style="margin-top:16px;padding:14px;border-radius:8px;background:#fff4cc;border:1px solid #d4af37;color:#5f4300">',
+    '<h3 style="margin:0 0 8px;color:#7a5600">Confirmation</h3>',
+    '<p style="margin:0">' + escapeHtml_(message) + '</p>',
+    '</div>',
+  ].join('');
 }
 
 function receiptMessageText_() {
@@ -341,9 +346,12 @@ function receiptMessageText_() {
 }
 
 function preReservationMessageHtml_() {
-  return '<p style="margin-top:16px;padding:12px;border-radius:8px;background:#f8fafc;border:1px solid #e2e8f0;color:#334155">' +
-    escapeHtml_(preReservationMessageText_()) +
-    '</p>';
+  return [
+    '<div style="margin-top:16px;padding:14px;border-radius:8px;background:#fff4cc;border:1px solid #d4af37;color:#5f4300">',
+    '<h3 style="margin:0 0 8px;color:#7a5600">Pré-réservation</h3>',
+    '<p style="margin:0">' + escapeHtml_(preReservationMessageText_()) + '</p>',
+    '</div>',
+  ].join('');
 }
 
 function preReservationMessageText_() {
@@ -367,8 +375,8 @@ function accessInstructionsHtml_() {
   if (!parts.length) return '';
 
   return [
-    '<div style="margin-top:16px;padding:12px;border-radius:8px;background:#fff7ed;border:1px solid #fed7aa;color:#7c2d12">',
-    '<h3 style="margin:0 0 8px;color:#7c2d12">Informations d’arrivée</h3>',
+    '<div style="margin-top:16px;padding:14px;border-radius:8px;background:#fff4cc;border:1px solid #d4af37;color:#5f4300">',
+    '<h3 style="margin:0 0 8px;color:#7a5600">Informations d’arrivée</h3>',
     parts.join(''),
     '</div>',
   ].join('');
