@@ -51,7 +51,7 @@
     .message.ok { background: #ecfdf3; color: var(--ok); }
     .message.warn { background: #fff7ed; color: var(--warn); }
     .message.bad { background: #fee2e2; color: var(--bad); }
-    .stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+    .stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
     .stat { border: 1px solid var(--line); border-radius: 8px; padding: 14px; background: #fff; }
     .stat span { display: block; color: var(--muted); font-size: 13px; }
     .stat strong { display: block; margin-top: 5px; font-size: 28px; }
@@ -92,9 +92,6 @@
     .room { border: 1px solid var(--line); border-radius: 8px; padding: 12px; background: #fff; }
     .room strong { display: block; }
     .room span { display: inline-block; margin-top: 8px; }
-    .anomaly { border: 1px solid var(--line); border-left: 5px solid var(--warn); border-radius: 8px; padding: 10px; margin-bottom: 8px; background: #fff; }
-    .anomaly.critical { border-left-color: var(--bad); }
-    .anomaly strong { display: block; }
     .top-actions { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
     .empty { padding: 12px; border: 1px dashed #c8ced6; border-radius: 8px; color: var(--muted); }
     @media (max-width: 900px) {
@@ -115,7 +112,7 @@
 <main>
   <section id="loginPanel" class="login">
     <h1>Administration réservations</h1>
-    <p>Accès protégé par PIN. Les réservations restent dans le Sheet, le module admin sert à valider, refuser et surveiller les anomalies.</p>
+    <p>Accès protégé par PIN. Les réservations restent dans le Sheet, le module admin sert à valider, refuser et suivre les chambres.</p>
     <label for="pin">PIN administrateur</label>
     <input id="pin" type="password" inputmode="numeric" autocomplete="one-time-code">
     <div class="login-actions">
@@ -140,7 +137,6 @@
 
     <div class="stats">
       <div class="stat"><span>À valider</span><strong id="statPending">0</strong></div>
-      <div class="stat"><span>Anomalies</span><strong id="statAnomalies">0</strong></div>
       <div class="stat"><span>Chambres libres</span><strong id="statFree">0</strong></div>
       <div class="stat"><span>Occupées</span><strong id="statOccupied">0</strong></div>
     </div>
@@ -163,17 +159,10 @@
       <div id="roomPlanBox" class="plan-grid"></div>
     </section>
 
-    <div class="layout">
-      <section>
-        <h2>Réservations à valider</h2>
-        <div id="pendingBox"></div>
-      </section>
-
-      <section>
-        <h2>Alertes</h2>
-        <div id="anomaliesBox"></div>
-      </section>
-    </div>
+    <section>
+      <h2>Réservations à valider</h2>
+      <div id="pendingBox"></div>
+    </section>
 
     <section>
       <h2>État des chambres</h2>
@@ -193,7 +182,6 @@
   let adminToken = sessionStorage.getItem('gestionAdminToken') || '';
   let refreshTimer = null;
   let previousPending = Number(localStorage.getItem('gestionAdminPending') || 0);
-  let previousAnomalies = Number(localStorage.getItem('gestionAdminAnomalies') || 0);
 
   const el = {
     loginPanel: document.getElementById('loginPanel'),
@@ -205,11 +193,9 @@
     dashboardMessage: document.getElementById('dashboardMessage'),
     generatedAt: document.getElementById('generatedAt'),
     statPending: document.getElementById('statPending'),
-    statAnomalies: document.getElementById('statAnomalies'),
     statFree: document.getElementById('statFree'),
     statOccupied: document.getElementById('statOccupied'),
     pendingBox: document.getElementById('pendingBox'),
-    anomaliesBox: document.getElementById('anomaliesBox'),
     roomPlanBox: document.getElementById('roomPlanBox'),
     roomsBox: document.getElementById('roomsBox'),
     historyBox: document.getElementById('historyBox'),
@@ -323,16 +309,14 @@
     const stats = data.stats || {};
     el.generatedAt.textContent = 'Dernière mise à jour : ' + (data.generatedAt || '');
     el.statPending.textContent = stats.pending || 0;
-    el.statAnomalies.textContent = stats.anomalies || 0;
     el.statFree.textContent = (stats.roomsFree || 0) + ' / ' + (stats.roomsTotal || 0);
     el.statOccupied.textContent = stats.roomsOccupied || 0;
 
     renderPending(data.pending || []);
-    renderAnomalies(data.anomalies || []);
     renderRoomPlan(data.rooms || []);
     renderRooms(data.rooms || []);
     renderHistory(data.requests || []);
-    notifyIfNeeded(stats.pending || 0, stats.anomalies || 0);
+    notifyIfNeeded(stats.pending || 0);
     showDashboardMessage('ok', 'Dashboard actualisé.');
   }
 
@@ -375,21 +359,6 @@
     el.pendingBox.querySelectorAll('.reject').forEach((button) => {
       button.addEventListener('click', () => reject(button.dataset.id));
     });
-  }
-
-  function renderAnomalies(items) {
-    if (!items.length) {
-      el.anomaliesBox.innerHTML = '<div class="empty">Aucune anomalie détectée.</div>';
-      return;
-    }
-
-    el.anomaliesBox.innerHTML = items.map((item) => `
-      <div class="anomaly ${safeAttr(item.level)}">
-        <strong>${safe(item.type)} · ${safe(item.level)}</strong>
-        <div>${safe(item.message)}</div>
-        <small>${safe(item.reference || '-')} · ${safe(item.room || '-')}</small>
-      </div>
-    `).join('');
   }
 
   function renderRoomPlan(items) {
@@ -504,19 +473,14 @@
     });
   }
 
-  function notifyIfNeeded(pending, anomalies) {
+  function notifyIfNeeded(pending) {
     if ('Notification' in window && Notification.permission === 'granted') {
       if (pending > previousPending) {
         new Notification('Nouvelle réservation à valider', { body: pending + ' demande(s) en attente.' });
       }
-      if (anomalies > previousAnomalies) {
-        new Notification('Anomalie réservation détectée', { body: anomalies + ' anomalie(s) à vérifier.' });
-      }
     }
     previousPending = pending;
-    previousAnomalies = anomalies;
     localStorage.setItem('gestionAdminPending', pending);
-    localStorage.setItem('gestionAdminAnomalies', anomalies);
   }
 
   function setLoginBusy(isBusy) {
