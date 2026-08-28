@@ -112,8 +112,8 @@ function createReservation(payload) {
     if (!name) throw new Error('Le nom est obligatoire.');
     if (!phone && !email) throw new Error('Ajoute au moins un téléphone ou un email.');
     if (email && !isValidEmail_(email)) throw new Error('Adresse email invalide.');
-    if (genderPreference && ['Homme', 'Femme', 'Indifférent', 'Indifferent'].indexOf(genderPreference) === -1) {
-      throw new Error('Choix chambre homme / femme invalide.');
+    if (['Homme', 'Femme'].indexOf(genderPreference) === -1) {
+      throw new Error('Choisis obligatoirement Homme ou Femme pour la chambre.');
     }
     if (!rulesAccepted) {
       throw new Error('Le règlement doit être lu et accepté avant d’envoyer la demande.');
@@ -142,7 +142,7 @@ function createReservation(payload) {
     const nightRate = Number(selected.nightRate || 0);
     const amount = stay.nights * nightRate;
     const publicStatus = 'À valider';
-    const genderLabel = genderPreference || 'Indifférent';
+    const genderLabel = genderPreference;
     const rulesAcceptedText = 'Règlement accepté le ' + formatDateTimeFr_(createdAt) + ' (' + rulesVersion + ')';
     const adminComment = [
       'Chambre homme / femme : ' + genderLabel,
@@ -280,7 +280,7 @@ function receiptEmailHtml_(receipt) {
     receiptEmailRow_('Demandeur', receipt.occupant),
     receiptEmailRow_('Téléphone', receipt.phone || '-'),
     receiptEmailRow_('Email', receipt.email || '-'),
-    receiptEmailRow_('Chambre homme / femme', receipt.genderPreference || 'Indifférent'),
+    receiptEmailRow_('Chambre homme / femme', receipt.genderPreference || '-'),
     receiptEmailRow_('Règlement accepté', receipt.rulesAcceptedAt || 'Oui'),
     receiptEmailRow_('Chambre', receipt.room),
     receiptEmailRow_('Arrivée', receipt.arrival),
@@ -313,7 +313,7 @@ function plainReceiptText_(receipt) {
     'Demandeur : ' + receipt.occupant,
     'Téléphone : ' + (receipt.phone || '-'),
     'Email : ' + (receipt.email || '-'),
-    'Chambre homme / femme : ' + (receipt.genderPreference || 'Indifférent'),
+    'Chambre homme / femme : ' + (receipt.genderPreference || '-'),
     'Règlement accepté : ' + (receipt.rulesAcceptedAt || 'Oui'),
     'Chambre : ' + receipt.room,
     'Arrivée : ' + receipt.arrival,
