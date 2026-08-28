@@ -1,6 +1,6 @@
 {
-  "name": "Admin chambres",
-  "short_name": "Admin UC",
+  "name": "Admin - Cayenne de Paris",
+  "short_name": "Admin",
   "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#f8fafc",

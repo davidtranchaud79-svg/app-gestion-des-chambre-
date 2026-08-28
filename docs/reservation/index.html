@@ -3,18 +3,18 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Admin - Cayenne de Paris</title>
-  <meta name="description" content="Accès administration des chambres de la Cayenne de Paris.">
-  <meta name="theme-color" content="#7f1d1d">
-  <link rel="apple-touch-icon" href="./apple-touch-icon.png">
-  <link rel="icon" href="./icon-192.png">
+  <title>Réservation - Cayenne de Paris</title>
+  <meta name="description" content="Accès au formulaire public de réservation des chambres de la Cayenne de Paris.">
+  <meta name="theme-color" content="#1d3557">
+  <link rel="apple-touch-icon" href="../assets/apple-touch-icon.png">
+  <link rel="icon" href="../assets/icon-192.png">
   <link rel="manifest" href="./manifest.json">
   <style>
     :root {
       --blue: #1d3557;
-      --red: #7f1d1d;
-      --red-dark: #5f1111;
-      --soft: #f8fafc;
+      --blue-dark: #10223c;
+      --red: #e72440;
+      --soft: #f5f7fb;
       --text: #1f2937;
       --muted: #64748b;
       --line: #e5e7eb;
@@ -33,8 +33,8 @@
       font-family: Arial, Helvetica, sans-serif;
       color: var(--text);
       background:
-        radial-gradient(circle at 14% 15%, rgba(127, 29, 29, .14), transparent 28%),
-        radial-gradient(circle at 86% 84%, rgba(29, 53, 87, .16), transparent 30%),
+        radial-gradient(circle at 15% 15%, rgba(231, 36, 64, .14), transparent 28%),
+        radial-gradient(circle at 88% 86%, rgba(29, 53, 87, .16), transparent 30%),
         linear-gradient(180deg, #fff 0%, var(--soft) 100%);
     }
 
@@ -62,14 +62,14 @@
       place-items: center;
       margin: 0 auto 16px;
       border-radius: 18px;
-      background: var(--red);
+      background: var(--blue);
       color: #fff;
-      box-shadow: 0 14px 30px rgba(127, 29, 29, .22);
+      box-shadow: 0 14px 30px rgba(29, 53, 87, .22);
     }
 
     h1 {
       margin: 0 0 10px;
-      color: var(--red);
+      color: var(--blue-dark);
       font-size: clamp(29px, 6vw, 38px);
       line-height: 1.08;
     }
@@ -98,18 +98,18 @@
     }
 
     .primary {
-      background: var(--red);
+      background: var(--blue);
       color: #fff;
     }
 
     .primary:hover {
-      background: var(--red-dark);
+      background: var(--blue-dark);
     }
 
     .secondary {
       border: 1px solid var(--line);
       background: #fff;
-      color: var(--blue);
+      color: var(--red);
     }
 
     svg {
@@ -122,15 +122,16 @@
     <img class="logo" src="../assets/logo-union-compagnonnique-paris.webp" alt="Union Compagnonnique Paris">
     <div class="icon" aria-hidden="true">
       <svg width="38" height="38" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path d="M24 25a8 8 0 1 0 0-16 8 8 0 0 0 0 16Z" stroke="currentColor" stroke-width="4"/>
-        <path d="M9 40c3-8 9-12 15-12s12 4 15 12" stroke="currentColor" stroke-width="4" stroke-linecap="round"/>
-        <path d="M37 12v8M33 16h8" stroke="currentColor" stroke-width="4" stroke-linecap="round"/>
+        <path d="M7 13v23" stroke="currentColor" stroke-width="4" stroke-linecap="round"/>
+        <path d="M7 26h34v10" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M13 18h10a5 5 0 0 1 5 5v3H13v-8Z" stroke="currentColor" stroke-width="4" stroke-linejoin="round"/>
+        <path d="M30 22h6a5 5 0 0 1 5 5v-1H30v-4Z" stroke="currentColor" stroke-width="4" stroke-linejoin="round"/>
       </svg>
     </div>
-    <h1>Admin chambres</h1>
-    <p>Ouvre le tableau de bord pour suivre les chambres, les demandes et les validations.</p>
+    <h1>Réservation chambre</h1>
+    <p>Ouvre le formulaire public pour vérifier les disponibilités et envoyer une demande.</p>
     <div class="actions">
-      <a class="primary" href="https://script.google.com/macros/s/AKfycbz1X6pjRUH3d5xoOtYN6AE__eYkAC5VFjbmogWcYaiUS6A4tHonv8C32ygqPrJSaWOTkw/exec?view=admin" rel="noopener">Ouvrir l’administration</a>
+      <a class="primary" href="https://script.google.com/macros/s/AKfycbz1X6pjRUH3d5xoOtYN6AE__eYkAC5VFjbmogWcYaiUS6A4tHonv8C32ygqPrJSaWOTkw/exec" rel="noopener">Ouvrir la réservation</a>
       <a class="secondary" href="../">Retour accueil</a>
     </div>
   </main>

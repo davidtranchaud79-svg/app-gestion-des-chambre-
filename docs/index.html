@@ -3,23 +3,24 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Union Compagnonnique Paris - Réservation chambre</title>
-  <meta name="description" content="Accès au formulaire de réservation de chambre de l'Union Compagnonnique Paris.">
-  <meta name="theme-color" content="#173660">
+  <title>La Cayenne de Paris - Chambres</title>
+  <meta name="description" content="Accès réservation et administration des chambres de la Cayenne de Paris.">
+  <meta name="theme-color" content="#1d3557">
   <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
   <link rel="icon" href="assets/icon-192.png">
   <link rel="manifest" href="manifest.webmanifest">
   <style>
     :root {
-      --red: #f0243f;
-      --red-dark: #b4152a;
-      --blue: #173660;
-      --blue-dark: #0d213e;
-      --paper: #ffffff;
-      --soft: #f4f6f9;
+      --blue: #1d3557;
+      --blue-dark: #10223c;
+      --red: #e72440;
+      --red-dark: #b71931;
+      --gold: #c7a766;
+      --soft: #f5f7fb;
       --text: #1f2937;
       --muted: #64748b;
       --line: #e5e7eb;
+      --shadow: 0 26px 70px rgba(15, 23, 42, .14);
     }
 
     * {
@@ -32,9 +33,9 @@
       font-family: Arial, Helvetica, sans-serif;
       color: var(--text);
       background:
-        radial-gradient(circle at 16% 18%, rgba(240, 36, 63, .13), transparent 28%),
-        radial-gradient(circle at 86% 82%, rgba(23, 54, 96, .15), transparent 30%),
-        linear-gradient(180deg, #fff 0%, var(--soft) 100%);
+        radial-gradient(circle at 15% 12%, rgba(231, 36, 64, .14), transparent 28%),
+        radial-gradient(circle at 88% 88%, rgba(29, 53, 87, .16), transparent 32%),
+        linear-gradient(180deg, #ffffff 0%, var(--soft) 100%);
     }
 
     main {
@@ -44,155 +45,189 @@
       padding: 22px;
     }
 
-    .page {
-      width: min(860px, 100%);
+    .portal {
+      width: min(920px, 100%);
       padding: 34px;
       border: 1px solid var(--line);
-      border-radius: 10px;
-      background: rgba(255, 255, 255, .94);
-      box-shadow: 0 28px 80px rgba(15, 23, 42, .14);
+      border-radius: 16px;
+      background: rgba(255, 255, 255, .96);
+      box-shadow: var(--shadow);
     }
 
-    .brand {
+    .logo {
       display: flex;
       justify-content: center;
-      padding: 8px 12px 28px;
+      padding: 8px 12px 26px;
       border-bottom: 1px solid var(--line);
     }
 
-    .brand img {
+    .logo img {
       width: min(560px, 100%);
       height: auto;
       display: block;
     }
 
-    .booking {
-      display: grid;
-      grid-template-columns: auto 1fr auto;
-      gap: 20px;
-      align-items: center;
-      margin-top: 28px;
-      padding: 22px;
-      border: 1px solid rgba(23, 54, 96, .14);
-      border-radius: 10px;
-      background: #fbfcff;
-    }
-
-    .bed {
-      width: 78px;
-      height: 78px;
-      display: grid;
-      place-items: center;
-      border-radius: 18px;
-      background: var(--blue);
-      color: #fff;
-      flex: 0 0 auto;
+    .intro {
+      max-width: 660px;
+      margin: 26px auto 0;
+      text-align: center;
     }
 
     .kicker {
-      margin: 0 0 7px;
+      margin: 0 0 8px;
       color: var(--red);
       font-size: 13px;
       font-weight: 800;
-      letter-spacing: .08em;
+      letter-spacing: .12em;
       text-transform: uppercase;
     }
 
     h1 {
       margin: 0;
       color: var(--blue-dark);
-      font-size: clamp(28px, 4.5vw, 44px);
-      line-height: 1.06;
+      font-size: clamp(30px, 5vw, 48px);
+      line-height: 1.05;
     }
 
     .lead {
       margin: 12px 0 0;
-      max-width: 500px;
       color: var(--muted);
       font-size: 17px;
-      line-height: 1.48;
+      line-height: 1.5;
     }
 
-    .cta {
-      display: inline-flex;
-      min-height: 52px;
-      align-items: center;
-      justify-content: center;
-      white-space: nowrap;
-      padding: 0 24px;
-      border-radius: 8px;
-      background: var(--red);
-      color: #fff;
-      font-weight: 800;
+    .choices {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+      margin-top: 30px;
+    }
+
+    .choice {
+      min-height: 210px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 18px;
+      padding: 22px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: #fff;
       text-decoration: none;
-      box-shadow: 0 14px 28px rgba(240, 36, 63, .24);
+      color: inherit;
+      box-shadow: 0 12px 28px rgba(15, 23, 42, .06);
+      transition: transform .14s ease, border-color .14s ease, box-shadow .14s ease;
     }
 
-    .cta:hover {
+    .choice:hover {
+      transform: translateY(-2px);
+      border-color: rgba(29, 53, 87, .26);
+      box-shadow: 0 18px 34px rgba(15, 23, 42, .10);
+    }
+
+    .icon {
+      width: 62px;
+      height: 62px;
+      display: grid;
+      place-items: center;
+      border-radius: 18px;
+      color: #fff;
+    }
+
+    .reservation .icon {
+      background: var(--blue);
+    }
+
+    .admin .icon {
       background: var(--red-dark);
     }
 
-    .direct {
-      margin: 18px 0 0;
-      text-align: center;
+    .choice h2 {
+      margin: 0 0 8px;
+      color: var(--blue-dark);
+      font-size: 25px;
+    }
+
+    .admin h2 {
+      color: var(--red-dark);
+    }
+
+    .choice p {
+      margin: 0;
       color: var(--muted);
-      font-size: 13px;
       line-height: 1.45;
     }
 
-    .direct a {
-      color: var(--blue);
-      font-weight: 700;
+    .button {
+      display: inline-flex;
+      min-height: 48px;
+      align-items: center;
+      justify-content: center;
+      align-self: flex-start;
+      padding: 0 18px;
+      border-radius: 10px;
+      background: var(--blue);
+      color: #fff;
+      font-weight: 800;
     }
 
-    .secondary-links {
+    .admin .button {
+      background: var(--red-dark);
+    }
+
+    .secondary {
       display: flex;
       flex-wrap: wrap;
       justify-content: center;
       gap: 10px;
-      margin-top: 16px;
+      margin-top: 18px;
     }
 
-    .secondary-link {
+    .secondary a {
+      min-height: 42px;
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      min-height: 42px;
-      padding: 0 16px;
+      padding: 0 15px;
       border: 1px solid var(--line);
-      border-radius: 8px;
-      color: var(--blue);
+      border-radius: 10px;
       background: #fff;
+      color: var(--blue);
       font-weight: 800;
       text-decoration: none;
     }
 
+    .hint {
+      margin: 18px 0 0;
+      color: var(--muted);
+      text-align: center;
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    svg {
+      display: block;
+    }
+
     @media (max-width: 760px) {
-      .page {
+      main {
+        align-items: start;
+        padding: 14px;
+      }
+
+      .portal {
         padding: 22px;
       }
 
-      .brand {
-        padding-bottom: 22px;
-      }
-
-      .booking {
+      .choices {
         grid-template-columns: 1fr;
-        justify-items: center;
-        text-align: center;
       }
 
-      .bed {
-        width: 72px;
-        height: 72px;
+      .choice {
+        min-height: 0;
       }
 
-      .lead {
-        margin-left: auto;
-        margin-right: auto;
-      }
-
-      .cta {
+      .button {
         width: 100%;
       }
     }
@@ -200,39 +235,57 @@
 </head>
 <body>
   <main>
-    <section class="page" aria-label="Réservation de chambre Union Compagnonnique Paris">
-      <div class="brand">
+    <section class="portal" aria-label="Portail chambres de la Cayenne de Paris">
+      <div class="logo">
         <img src="assets/logo-union-compagnonnique-paris.webp" alt="Union Compagnonnique Paris">
       </div>
 
-      <div class="booking">
-        <div class="bed" aria-hidden="true">
-          <svg width="46" height="46" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M7 13v23" stroke="currentColor" stroke-width="4" stroke-linecap="round"/>
-            <path d="M7 26h34v10" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
-            <path d="M13 18h10a5 5 0 0 1 5 5v3H13v-8Z" stroke="currentColor" stroke-width="4" stroke-linejoin="round"/>
-            <path d="M30 22h6a5 5 0 0 1 5 5v-1H30v-4Z" stroke="currentColor" stroke-width="4" stroke-linejoin="round"/>
-          </svg>
-        </div>
-
-        <div>
-          <p class="kicker">Réservation chambre</p>
-          <h1>Vérifier les disponibilités</h1>
-          <p class="lead">Accédez au formulaire en ligne pour choisir les dates, la chambre et envoyer la demande à la réception.</p>
-        </div>
-
-        <a class="cta" href="https://script.google.com/macros/s/AKfycbyuWvq04pxNvszzTtSTHGrRJXCn8grvdNwmiz_c58aNcGaVcAX5EiQhF4bTxPyrOV389g/exec" target="_blank" rel="noopener">Réserver</a>
+      <div class="intro">
+        <p class="kicker">Cayenne de Paris</p>
+        <h1>Gestion des chambres</h1>
+        <p class="lead">Choisis l’accès dont tu as besoin : formulaire public de réservation ou tableau d’administration.</p>
       </div>
 
-      <p class="direct">
-        En cas de souci avec le bouton :
-        <a href="https://script.google.com/macros/s/AKfycbyuWvq04pxNvszzTtSTHGrRJXCn8grvdNwmiz_c58aNcGaVcAX5EiQhF4bTxPyrOV389g/exec" target="_blank" rel="noopener">ouvrir le formulaire directement</a>
-      </p>
+      <div class="choices">
+        <a class="choice reservation" href="reservation/">
+          <div>
+            <div class="icon" aria-hidden="true">
+              <svg width="34" height="34" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M7 13v23" stroke="currentColor" stroke-width="4" stroke-linecap="round"/>
+                <path d="M7 26h34v10" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M13 18h10a5 5 0 0 1 5 5v3H13v-8Z" stroke="currentColor" stroke-width="4" stroke-linejoin="round"/>
+                <path d="M30 22h6a5 5 0 0 1 5 5v-1H30v-4Z" stroke="currentColor" stroke-width="4" stroke-linejoin="round"/>
+              </svg>
+            </div>
+            <h2>Réservation</h2>
+            <p>Accès au formulaire public pour vérifier les disponibilités et déposer une demande.</p>
+          </div>
+          <span class="button">Ouvrir la réservation</span>
+        </a>
 
-      <div class="secondary-links">
-        <a class="secondary-link" href="notifications/">Activer les notifications portable</a>
-        <a class="secondary-link" href="notifications.html">Lien de secours notifications</a>
+        <a class="choice admin" href="admin/">
+          <div>
+            <div class="icon" aria-hidden="true">
+              <svg width="34" height="34" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M24 25a8 8 0 1 0 0-16 8 8 0 0 0 0 16Z" stroke="currentColor" stroke-width="4"/>
+                <path d="M9 40c3-8 9-12 15-12s12 4 15 12" stroke="currentColor" stroke-width="4" stroke-linecap="round"/>
+                <path d="M37 12v8M33 16h8" stroke="currentColor" stroke-width="4" stroke-linecap="round"/>
+              </svg>
+            </div>
+            <h2>Admin</h2>
+            <p>Accès au dashboard pour suivre les chambres et gérer les validations.</p>
+          </div>
+          <span class="button">Ouvrir l’admin</span>
+        </a>
       </div>
+
+      <div class="secondary">
+        <a href="notifications/">Notifications portable</a>
+        <a href="https://script.google.com/macros/s/AKfycbz1X6pjRUH3d5xoOtYN6AE__eYkAC5VFjbmogWcYaiUS6A4tHonv8C32ygqPrJSaWOTkw/exec" rel="noopener">Lien direct réservation</a>
+        <a href="https://script.google.com/macros/s/AKfycbz1X6pjRUH3d5xoOtYN6AE__eYkAC5VFjbmogWcYaiUS6A4tHonv8C32ygqPrJSaWOTkw/exec?view=admin" rel="noopener">Lien direct admin</a>
+      </div>
+
+      <p class="hint">Pour créer deux icônes sur ton portable, ouvre séparément les pages Réservation et Admin, puis ajoute chacune à l’écran d’accueil.</p>
     </section>
   </main>
 </body>
