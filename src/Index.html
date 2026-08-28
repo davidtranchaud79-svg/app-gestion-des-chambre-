@@ -4,153 +4,523 @@
   <base target="_top">
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Réservation des chambres · La Cayenne de Paris</title>
+  <title>Gestion chambre</title>
   <style>
-    :root { --brand:#5a0d0d; --brand-dark:#3d0808; --brand-soft:#f6eeee; --gold:#c7a766; --gold-soft:#f8f3e8; --bg:#f5f4f2; --text:#242424; --muted:#667085; --line:#ddd8d1; --ok:#166534; --warn:#92400e; --bad:#991b1b; --shadow:0 12px 34px rgba(59,25,25,.08); }
-    * { box-sizing:border-box; }
-    body { margin:0; font-family:Arial,Helvetica,sans-serif; background:radial-gradient(circle at top right,rgba(199,167,102,.12),transparent 28rem),linear-gradient(180deg,#faf9f7 0,var(--bg) 100%); color:var(--text); }
-    main { max-width:930px; margin:auto; padding:26px 20px 50px; }
-    .brand-header { position:relative; overflow:hidden; display:flex; align-items:center; gap:20px; background:linear-gradient(135deg,#fff 0%,#fbf7f3 100%); border:1px solid #e3ddd5; border-radius:18px; padding:22px 24px; box-shadow:var(--shadow); }
-    .brand-header::after { content:""; position:absolute; width:170px; height:170px; right:-76px; top:-86px; border-radius:50%; background:rgba(90,13,13,.05); }
-    .brand-logo { width:98px; height:98px; flex:0 0 98px; display:grid; place-items:center; border-radius:50%; background:#fff; border:2px solid var(--gold); box-shadow:0 6px 20px rgba(90,13,13,.10); }
-    .brand-logo svg { width:82px; height:82px; display:block; }
-    .brand-copy { position:relative; z-index:1; min-width:0; }
-    .brand-kicker { margin:0 0 5px; color:var(--gold); font-size:12px; font-weight:800; letter-spacing:.12em; text-transform:uppercase; }
-    .brand-title { margin:0; color:var(--brand); font-family:Georgia,"Times New Roman",serif; font-size:clamp(27px,4.8vw,40px); line-height:1.04; }
-    .brand-subtitle { margin:7px 0 0; color:#504b46; font-size:15px; line-height:1.45; }
-    .mode-chip { display:inline-flex; align-items:center; gap:7px; margin-top:11px; border:1px solid #decfba; background:var(--gold-soft); color:#6f5627; border-radius:999px; padding:6px 10px; font-size:12px; font-weight:800; }
-    .mode-chip::before { content:""; width:8px; height:8px; border-radius:50%; background:var(--gold); }
-    section { background:#fff; border:1px solid var(--line); border-radius:14px; padding:18px; margin-top:16px; box-shadow:0 4px 18px rgba(31,41,55,.035); }
-    h2 { margin:0 0 10px; color:var(--brand); font-size:21px; }
-    p { color:var(--muted); }
-    .section-title { display:flex; align-items:center; gap:10px; margin-bottom:14px; }
-    .section-icon { width:34px; height:34px; flex:0 0 34px; display:grid; place-items:center; color:var(--brand); background:var(--brand-soft); border-radius:10px; font-size:17px; }
-    .section-title h2 { margin:0; }
-    .grid { display:grid; grid-template-columns:1fr 1fr; gap:13px; }
-    .full { grid-column:1/-1; }
-    label { font-weight:700; font-size:13px; display:block; margin-bottom:6px; color:#353535; }
-    input,select,textarea,button { width:100%; box-sizing:border-box; font:inherit; }
-    input,select,textarea { border:1px solid #cbc7c0; border-radius:10px; padding:11px 12px; background:#fff; outline:none; transition:border-color .15s,box-shadow .15s; }
-    input:focus,select:focus,textarea:focus { border-color:var(--brand); box-shadow:0 0 0 3px rgba(90,13,13,.09); }
-    textarea { min-height:86px; resize:vertical; }
-    button { border:0; border-radius:10px; padding:12px 14px; background:linear-gradient(180deg,#681212,var(--brand)); color:#fff; font-weight:800; cursor:pointer; transition:transform .1s,background .15s; }
-    button:hover { background:var(--brand-dark); }
-    button:active { transform:translateY(1px); }
-    button.secondary { background:#f4f1ed; color:#272421; border:1px solid #d6d0c8; }
-    button.secondary:hover { background:#ece7e1; }
-    button:disabled { opacity:.6; cursor:not-allowed; }
-    .actions { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:15px; }
-    .msg { display:none; padding:12px; border-radius:10px; margin-top:12px; font-weight:700; }
-    .msg.show { display:block; }
-    .ok { background:#e8f7ee; color:#166534; }
-    .warn { background:#fff7ed; color:#92400e; }
-    .bad { background:#fee2e2; color:#991b1b; }
-    .rooms { display:grid; gap:10px; }
-    .room { display:flex; justify-content:space-between; align-items:center; gap:10px; border:1px solid #dedbd6; border-radius:11px; padding:12px; background:#fff; }
-    .badge { background:#e8f7ee; color:#166534; border-radius:20px; padding:5px 9px; font-weight:700; font-size:12px; }
-    .hidden { display:none; }
-    .receipt { border:1px solid #c9a65e; }
-    .receipt-brand { display:flex; align-items:center; gap:11px; margin-bottom:14px; color:var(--brand); }
-    .receipt-brand svg { width:44px; height:44px; flex:0 0 44px; }
-    .receipt-brand strong { display:block; font-family:Georgia,serif; font-size:18px; }
-    .receipt-brand span { color:var(--muted); font-size:12px; }
-    .receipt-head { display:flex; justify-content:space-between; gap:16px; align-items:flex-start; border-bottom:1px solid #ddd; padding-bottom:12px; margin-bottom:12px; }
-    .receipt-head h2 { margin:0 0 4px; color:var(--brand); }
-    .receipt-ref { text-align:right; font-weight:700; color:var(--brand); }
-    .receipt-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px 16px; }
-    .receipt-row { border-bottom:1px solid #eee; padding:7px 0; }
-    .receipt-row span { display:block; color:var(--muted); font-size:12px; }
-    .receipt-row strong { display:block; margin-top:2px; }
-    .receipt-total { margin-top:14px; padding:12px; border-radius:8px; background:var(--gold-soft); color:#6f5627; font-weight:800; }
-    .receipt-note { margin-top:10px; font-size:13px; color:var(--muted); }
-    .receipt-actions { margin-top:14px; display:grid; grid-template-columns:1fr 1fr; gap:12px; }
-    .rules-section { box-shadow:none; background:#fcfbf9; border-color:#e3ddd5; }
-    .rules-intro { margin:0 0 10px; color:var(--muted); }
-    .rules-box { max-height:260px; overflow-y:auto; border:1px solid #d9dde3; border-radius:10px; padding:14px; background:#fff; }
-    .rules-box h3 { margin:14px 0 6px; color:var(--brand); font-size:17px; }
-    .rules-box h3:first-child { margin-top:0; }
-    .rules-box ul { margin:0 0 8px 18px; padding:0; }
-    .rules-box li { margin:0 0 6px; line-height:1.35; }
-    .acceptance { margin-top:12px; padding:12px; border:1px solid #d9dde3; border-radius:10px; background:#fff; }
-    .acceptance label { display:flex; gap:10px; align-items:flex-start; margin:0; font-size:14px; line-height:1.35; }
-    .acceptance input { width:auto; margin-top:2px; }
-    .acceptance.disabled { opacity:.68; }
-    .rules-hint { margin-top:8px; color:var(--warn); font-size:13px; }
-    small { color:var(--muted); }
-    @media(max-width:700px){ main{padding:14px 12px 34px}.brand-header{align-items:flex-start;padding:18px;gap:14px;border-radius:15px}.brand-logo{width:76px;height:76px;flex-basis:76px}.brand-logo svg{width:64px;height:64px}.grid,.actions,.receipt-grid,.receipt-actions{grid-template-columns:1fr}.receipt-ref{text-align:left}.receipt-head{display:block}.room{align-items:flex-start} }
-    @media(max-width:480px){ .brand-header{display:block}.brand-logo{margin-bottom:13px} }
-    @media print{ body{background:#fff} body *{visibility:hidden} #receiptPanel,#receiptPanel *{visibility:visible} #receiptPanel{position:absolute;left:0;top:0;width:100%;border:0;margin:0;padding:20px;box-shadow:none}.no-print{display:none!important} }
+    body { margin: 0; font-family: Arial, sans-serif; background: #f7f7f7; color: #222; }
+    main { max-width: 880px; margin: auto; padding: 24px; }
+    h1 { margin: 0 0 8px; color: #5a0d0d; }
+    p { color: #667085; }
+    section { background: white; border: 1px solid #ddd; border-radius: 8px; padding: 16px; margin-top: 16px; }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .full { grid-column: 1 / -1; }
+    label { font-weight: 700; font-size: 13px; display: block; margin-bottom: 5px; }
+    input, select, textarea, button { width: 100%; box-sizing: border-box; font: inherit; }
+    input, select, textarea { border: 1px solid #ccc; border-radius: 8px; padding: 10px; }
+    textarea { min-height: 80px; }
+    button { border: 0; border-radius: 8px; padding: 11px; background: #5a0d0d; color: white; font-weight: 700; cursor: pointer; }
+    button.secondary { background: #eee; color: #222; border: 1px solid #ccc; }
+    button:disabled { opacity: .6; cursor: not-allowed; }
+    .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 14px; }
+    .msg { display: none; padding: 12px; border-radius: 8px; margin-top: 12px; }
+    .msg.show { display: block; }
+    .ok { background: #e8f7ee; color: #166534; }
+    .warn { background: #fff7ed; color: #92400e; }
+    .bad { background: #fee2e2; color: #991b1b; }
+    .rooms { display: grid; gap: 10px; }
+    .room { display: flex; justify-content: space-between; gap: 10px; border: 1px solid #ddd; border-radius: 8px; padding: 12px; }
+    .badge { background: #e8f7ee; color: #166534; border-radius: 20px; padding: 5px 9px; font-weight: 700; font-size: 12px; }
+    .hidden { display: none; }
+    .receipt { border-color: #5a0d0d; }
+    .receipt-head { display: flex; justify-content: space-between; gap: 16px; align-items: flex-start; border-bottom: 1px solid #ddd; padding-bottom: 12px; margin-bottom: 12px; }
+    .receipt-head h2 { margin: 0 0 4px; color: #5a0d0d; }
+    .receipt-ref { text-align: right; font-weight: 700; color: #5a0d0d; }
+    .receipt-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 16px; }
+    .receipt-row { border-bottom: 1px solid #eee; padding: 7px 0; }
+    .receipt-row span { display: block; color: #667085; font-size: 12px; }
+    .receipt-row strong { display: block; margin-top: 2px; }
+    .receipt-total { margin-top: 14px; padding: 12px; border-radius: 8px; background: #fff7ed; color: #92400e; font-weight: 700; }
+    .receipt-note { margin-top: 10px; font-size: 13px; color: #667085; }
+    .receipt-actions { margin-top: 14px; display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .rules-intro { margin: 0 0 10px; color: #667085; }
+    .rules-box { max-height: 260px; overflow-y: auto; border: 1px solid #d9dde3; border-radius: 8px; padding: 14px; background: #fff; }
+    .rules-box h3 { margin: 14px 0 6px; color: #5a0d0d; font-size: 17px; }
+    .rules-box h3:first-child { margin-top: 0; }
+    .rules-box ul { margin: 0 0 8px 18px; padding: 0; }
+    .rules-box li { margin: 0 0 6px; line-height: 1.35; }
+    .acceptance { margin-top: 12px; padding: 12px; border: 1px solid #d9dde3; border-radius: 8px; background: #f8fafc; }
+    .acceptance label { display: flex; gap: 10px; align-items: flex-start; margin: 0; font-size: 14px; line-height: 1.35; }
+    .acceptance input { width: auto; margin-top: 2px; }
+    .acceptance.disabled { opacity: .68; }
+    .rules-hint { margin-top: 8px; color: #92400e; font-size: 13px; }
+    small { color: #667085; }
+    @media (max-width: 700px) { .grid, .actions, .receipt-grid, .receipt-actions { grid-template-columns: 1fr; } .receipt-ref { text-align: left; } .receipt-head { display: block; } }
+    @media print {
+      body { background: white; }
+      body * { visibility: hidden; }
+      #receiptPanel, #receiptPanel * { visibility: visible; }
+      #receiptPanel { position: absolute; left: 0; top: 0; width: 100%; border: 0; margin: 0; padding: 20px; }
+      .no-print { display: none !important; }
+    }
   </style>
 </head>
 <body>
 <main>
-  <div class="brand-header no-print">
-    <div class="brand-logo" aria-hidden="true">
-      <svg viewBox="0 0 120 120" role="img"><path d="M21 50 60 21l39 29" fill="none" stroke="#5a0d0d" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/><path d="M29 48v43h62V48" fill="none" stroke="#5a0d0d" stroke-width="5" stroke-linejoin="round"/><path d="M38 74h48v16H38z" fill="#f8f3e8" stroke="#5a0d0d" stroke-width="4"/><path d="M38 67v23M86 65v25M44 68h16c6 0 9 3 9 6H44z" fill="#c7a766" stroke="#5a0d0d" stroke-width="4" stroke-linejoin="round"/><path d="M36 96c12 6 36 8 52 0" fill="none" stroke="#c7a766" stroke-width="4" stroke-linecap="round"/></svg>
-    </div>
-    <div class="brand-copy"><div class="brand-kicker">Union Compagnonnique</div><h1 class="brand-title">La Cayenne de Paris</h1><p class="brand-subtitle">Réservation du lit du passant · Vérification des disponibilités en temps réel puis demande de réservation.</p><div class="mode-chip">Formulaire public</div></div>
-  </div>
+  <h1>Gestion chambre</h1>
+  <p>Verification des disponibilites en temps reel puis demande de reservation.</p>
 
   <section class="no-print">
-    <div class="section-title"><div class="section-icon">🛏️</div><h2>Demande de réservation</h2></div>
     <div class="grid">
-      <div><label for="arrival">Arrivée</label><input id="arrival" type="date"></div>
-      <div><label for="departure">Départ</label><input id="departure" type="date"></div>
-      <div class="full"><label for="requestedRoom">Chambre souhaitée</label><select id="requestedRoom"><option value="">Première chambre disponible</option></select></div>
-      <div><label for="genderPreference">Chambre homme / femme</label><select id="genderPreference"><option value="">Indifférent</option><option value="Homme">Homme</option><option value="Femme">Femme</option></select></div>
-      <div><label for="occupant">Nom du demandeur</label><input id="occupant" autocomplete="name"></div>
-      <div><label for="phone">Téléphone</label><input id="phone" autocomplete="tel"></div>
-      <div class="full"><label for="email">Email</label><input id="email" type="email" autocomplete="email"></div>
-      <div class="full"><label for="comment">Commentaire</label><textarea id="comment" placeholder="Précision utile pour la réception"></textarea></div>
+      <div>
+        <label for="arrival">Arrivee</label>
+        <input id="arrival" type="date">
+      </div>
+      <div>
+        <label for="departure">Depart</label>
+        <input id="departure" type="date">
+      </div>
+      <div class="full">
+        <label for="requestedRoom">Chambre souhaitee</label>
+        <select id="requestedRoom">
+          <option value="">Premiere chambre disponible</option>
+        </select>
+      </div>
+      <div>
+        <label for="genderPreference">Chambre homme / femme</label>
+        <select id="genderPreference" required>
+          <option value="" selected disabled>Choisir homme ou femme</option>
+          <option value="Homme">Homme</option>
+          <option value="Femme">Femme</option>
+        </select>
+      </div>
+      <div>
+        <label for="occupant">Nom du demandeur</label>
+        <input id="occupant" autocomplete="name">
+      </div>
+      <div>
+        <label for="phone">Telephone</label>
+        <input id="phone" autocomplete="tel">
+      </div>
+      <div class="full">
+        <label for="email">Email</label>
+        <input id="email" type="email" autocomplete="email">
+      </div>
+      <div class="full">
+        <label for="comment">Commentaire</label>
+        <textarea id="comment" placeholder="Precision utile pour la reception"></textarea>
+      </div>
     </div>
 
     <section class="rules-section">
       <h2>Règlement du lit du passant</h2>
       <p class="rules-intro">Lis le règlement jusqu’au bout pour pouvoir confirmer que tu l’acceptes avant d’envoyer la demande.</p>
       <div id="rulesBox" class="rules-box" tabindex="0" aria-label="Règlement du lit du passant">
-        <h3>1. Réservation</h3><ul><li>Toute demande doit être faite par le formulaire de réservation public.</li><li>La demande doit idéalement être transmise au moins 3 jours avant l’arrivée.</li><li>Une demande de dernière minute peut être déposée, mais elle n’est pas garantie sans validation explicite de la réception.</li><li>Aucune réservation à la volée, sans trace dans le formulaire, n’est considérée comme validée.</li><li>La demande doit indiquer des dates exactes, un nom complet et au moins un moyen de contact valide.</li><li>Toute modification de date, d’heure d’arrivée ou d’annulation doit être signalée dès que possible.</li></ul>
-        <h3>2. Validation et attribution</h3><ul><li>La chambre est attribuée après vérification des disponibilités par l’administrateur.</li><li>Le choix homme/femme sert à faciliter l’attribution et l’organisation des chambres.</li><li>La validation finale est envoyée par email lorsque l’adresse a été renseignée.</li><li>La chambre indiquée dans le formulaire reste une préférence : l’attribution définitive dépend de l’occupation réelle et de l’organisation de la Cayenne.</li><li>Une réservation n’est considérée comme confirmée qu’après validation par l’administrateur.</li></ul>
-        <h3>3. Accès et clefs</h3><ul><li>La clef remise au passant permet l’accès prévu pour le séjour validé et doit être utilisée avec soin.</li><li>Le code de la boîte à clef de la chambre est communiqué uniquement après validation de la réservation.</li><li>La clef de chambre doit être utilisée uniquement pour la chambre attribuée.</li><li>Le code de la boîte à clef est strictement personnel pour le séjour validé et ne doit pas être communiqué à une autre personne.</li><li>La porte de la chambre et les accès doivent être refermés correctement après chaque passage.</li><li>Au départ, la clef doit impérativement être déposée dans la boîte prévue pour le retour des clefs du passant.</li></ul>
-        <h3>4. Règles de conduite</h3><ul><li>Respecter le calme des lieux, particulièrement le soir et le matin.</li><li>Ne pas entrer dans une autre chambre.</li><li>Ne pas inviter de personne extérieure dans la chambre sans accord préalable.</li><li>Ne rien prendre dans le frigo, le congélateur ou les espaces communs sans autorisation.</li><li>Respecter les espaces communs : cuisine, sanitaires, douches et circulations.</li><li>Les lieux communs doivent être laissés propres après utilisation : vaisselle, plan de travail, sanitaires et douche.</li><li>Le tabac, les nuisances sonores et tout comportement gênant pour les occupants ne sont pas acceptés.</li><li>Signaler rapidement tout problème de propreté, de clef, de chambre ou de matériel.</li></ul>
-        <h3>5. Draps et propreté</h3><ul><li>Le lit doit être laissé propre au départ.</li><li>Les draps doivent être changés le matin du départ selon les consignes affichées sur place.</li><li>Les effets personnels doivent être retirés au départ. La Cayenne ne peut pas être tenue responsable des objets oubliés.</li><li>La chambre ne doit pas être encombrée et doit rester disponible pour le passant suivant.</li><li>Tout dégât, casse ou problème constaté doit être signalé avant le départ.</li></ul>
-        <h3>6. Paiement</h3><ul><li>Le tarif de référence 2026 est de 25 euros par nuitée, hors repas.</li><li>Le paiement se fait en espèces uniquement, sous forme de don à la Cayenne.</li><li>Aucun justificatif ni facture ne sera établi pour ce don.</li><li>Les repas éventuels ne sont pas inclus dans le prix de la nuitée.</li><li>Le règlement est à déposer selon les consignes communiquées sur place ou par la réception.</li><li>En cas de séjour écourté ou modifié, prévenir l’administrateur afin que le registre reste à jour.</li></ul>
-        <h3>7. Départ</h3><ul><li>Avant de partir, vérifier que la chambre est rangée, que les draps sont traités selon la consigne et que la clef est bien rendue.</li><li>Le départ doit libérer la chambre dans un état permettant d’accueillir le passant suivant sans intervention urgente.</li><li>La clef ne doit jamais être conservée après le départ, même pour un retour prévu plus tard.</li><li>En cas de perte de clef ou de difficulté, prévenir immédiatement la réception ou un responsable de la Cayenne.</li></ul>
-        <h3>Acceptation</h3><p>En validant le formulaire, le demandeur déclare avoir lu le règlement jusqu’au bout, l’avoir compris et l’accepter pour toute la durée de son séjour.</p>
+        <h3>1. Réservation</h3>
+        <ul>
+          <li>Toute demande doit être faite par le formulaire de réservation public.</li>
+          <li>La demande doit idéalement être transmise au moins 3 jours avant l’arrivée.</li>
+          <li>Une demande de dernière minute peut être déposée, mais elle n’est pas garantie sans validation explicite de la réception.</li>
+          <li>Aucune réservation à la volée, sans trace dans le formulaire, n’est considérée comme validée.</li>
+          <li>La demande doit indiquer des dates exactes, un nom complet et au moins un moyen de contact valide.</li>
+          <li>Toute modification de date, d’heure d’arrivée ou d’annulation doit être signalée dès que possible.</li>
+        </ul>
+
+        <h3>2. Validation et attribution</h3>
+        <ul>
+          <li>La chambre est attribuée après vérification des disponibilités par l’administrateur.</li>
+          <li>Le choix homme/femme sert à faciliter l’attribution et l’organisation des chambres.</li>
+          <li>La validation finale est envoyée par email lorsque l’adresse a été renseignée.</li>
+          <li>La chambre indiquée dans le formulaire reste une préférence : l’attribution définitive dépend de l’occupation réelle et de l’organisation de la Cayenne.</li>
+          <li>Une réservation n’est considérée comme confirmée qu’après validation par l’administrateur.</li>
+        </ul>
+
+        <h3>3. Accès et clefs</h3>
+        <ul>
+          <li>La clef remise au passant permet l’accès prévu pour le séjour validé et doit être utilisée avec soin.</li>
+          <li>Le code de la boîte à clef de la chambre est communiqué uniquement après validation de la réservation.</li>
+          <li>La clef de chambre doit être utilisée uniquement pour la chambre attribuée.</li>
+          <li>Le code de la boîte à clef est strictement personnel pour le séjour validé et ne doit pas être communiqué à une autre personne.</li>
+          <li>La porte de la chambre et les accès doivent être refermés correctement après chaque passage.</li>
+          <li>Au départ, la clef doit impérativement être déposée dans la boîte prévue pour le retour des clefs du passant.</li>
+        </ul>
+
+        <h3>4. Règles de conduite</h3>
+        <ul>
+          <li>Respecter le calme des lieux, particulièrement le soir et le matin.</li>
+          <li>Ne pas entrer dans une autre chambre.</li>
+          <li>Ne pas inviter de personne extérieure dans la chambre sans accord préalable.</li>
+          <li>Ne rien prendre dans le frigo, le congélateur ou les espaces communs sans autorisation.</li>
+          <li>Respecter les espaces communs : cuisine, sanitaires, douches et circulations.</li>
+          <li>Les lieux communs doivent être laissés propres après utilisation : vaisselle, plan de travail, sanitaires et douche.</li>
+          <li>Le tabac, les nuisances sonores et tout comportement gênant pour les occupants ne sont pas acceptés.</li>
+          <li>Signaler rapidement tout problème de propreté, de clef, de chambre ou de matériel.</li>
+        </ul>
+
+        <h3>5. Draps et propreté</h3>
+        <ul>
+          <li>Le lit doit être laissé propre au départ.</li>
+          <li>Les draps doivent être changés le matin du départ selon les consignes affichées sur place.</li>
+          <li>Les effets personnels doivent être retirés au départ. La Cayenne ne peut pas être tenue responsable des objets oubliés.</li>
+          <li>La chambre ne doit pas être encombrée et doit rester disponible pour le passant suivant.</li>
+          <li>Tout dégât, casse ou problème constaté doit être signalé avant le départ.</li>
+        </ul>
+
+        <h3>6. Paiement</h3>
+        <ul>
+          <li>Le tarif de référence 2026 est de 25 euros par nuitée, hors repas.</li>
+          <li>Le paiement se fait en espèces uniquement, sous forme de don à la Cayenne.</li>
+          <li>Aucun justificatif ni facture ne sera établi pour ce don.</li>
+          <li>Les repas éventuels ne sont pas inclus dans le prix de la nuitée.</li>
+          <li>Le règlement est à déposer selon les consignes communiquées sur place ou par la réception.</li>
+          <li>En cas de séjour écourté ou modifié, prévenir l’administrateur afin que le registre reste à jour.</li>
+        </ul>
+
+        <h3>7. Départ</h3>
+        <ul>
+          <li>Avant de partir, vérifier que la chambre est rangée, que les draps sont traités selon la consigne et que la clef est bien rendue.</li>
+          <li>Le départ doit libérer la chambre dans un état permettant d’accueillir le passant suivant sans intervention urgente.</li>
+          <li>La clef ne doit jamais être conservée après le départ, même pour un retour prévu plus tard.</li>
+          <li>En cas de perte de clef ou de difficulté, prévenir immédiatement la réception ou un responsable de la Cayenne.</li>
+        </ul>
+
+        <h3>Acceptation</h3>
+        <p>En validant le formulaire, le demandeur déclare avoir lu le règlement jusqu’au bout, l’avoir compris et l’accepter pour toute la durée de son séjour.</p>
       </div>
-      <div id="rulesAcceptanceBox" class="acceptance disabled"><label><input id="rulesAccepted" type="checkbox" disabled><span>J’ai lu le règlement jusqu’au bout et je l’accepte pour cette demande de réservation.</span></label><div id="rulesHint" class="rules-hint">Déroule le règlement jusqu’en bas pour activer la case.</div></div>
+      <div id="rulesAcceptanceBox" class="acceptance disabled">
+        <label>
+          <input id="rulesAccepted" type="checkbox" disabled>
+          <span>J’ai lu le règlement jusqu’au bout et je l’accepte pour cette demande de réservation.</span>
+        </label>
+        <div id="rulesHint" class="rules-hint">Déroule le règlement jusqu’en bas pour activer la case.</div>
+      </div>
     </section>
-    <div class="actions"><button class="secondary" id="checkButton" type="button">Vérifier</button><button id="sendButton" type="button">Envoyer la demande</button></div>
+
+    <div class="actions">
+      <button class="secondary" id="checkButton" type="button">Verifier</button>
+      <button id="sendButton" type="button">Envoyer la demande</button>
+    </div>
+
     <div id="msg" class="msg"></div>
   </section>
 
-  <section id="receiptPanel" class="receipt hidden"><div id="receiptContent"></div><div class="receipt-actions no-print"><button type="button" onclick="window.print()">Imprimer le reçu</button><button class="secondary" type="button" onclick="newRequest()">Nouvelle demande</button></div></section>
-  <section class="no-print"><div class="section-title"><div class="section-icon">✓</div><h2>Disponibilités</h2></div><div id="rooms" class="rooms"></div></section>
+  <section id="receiptPanel" class="receipt hidden">
+    <div id="receiptContent"></div>
+    <div class="receipt-actions no-print">
+      <button type="button" onclick="window.print()">Imprimer le reçu</button>
+      <button class="secondary" type="button" onclick="newRequest()">Nouvelle demande</button>
+    </div>
+  </section>
+
+  <section class="no-print">
+    <h2>Disponibilites</h2>
+    <div id="rooms" class="rooms"></div>
+  </section>
 </main>
 
 <script>
-  const RULES_VERSION='reglement-lit-passant-2026-08-27'; let rulesRead=false;
-  const elements={arrival:document.getElementById('arrival'),departure:document.getElementById('departure'),requestedRoom:document.getElementById('requestedRoom'),genderPreference:document.getElementById('genderPreference'),occupant:document.getElementById('occupant'),phone:document.getElementById('phone'),email:document.getElementById('email'),comment:document.getElementById('comment'),rulesBox:document.getElementById('rulesBox'),rulesAccepted:document.getElementById('rulesAccepted'),rulesAcceptanceBox:document.getElementById('rulesAcceptanceBox'),rulesHint:document.getElementById('rulesHint'),checkButton:document.getElementById('checkButton'),sendButton:document.getElementById('sendButton'),msg:document.getElementById('msg'),rooms:document.getElementById('rooms'),receiptPanel:document.getElementById('receiptPanel'),receiptContent:document.getElementById('receiptContent')};
-  window.addEventListener('load',init);
-  function init(){const today=new Date(),tomorrow=new Date(Date.now()+86400000);elements.arrival.value=iso(today);elements.departure.value=iso(tomorrow);elements.arrival.min=iso(today);elements.departure.min=iso(tomorrow);elements.arrival.addEventListener('change',syncDeparture);elements.rulesBox.addEventListener('scroll',updateRulesAcceptance);elements.checkButton.addEventListener('click',()=>checkRooms(false));elements.sendButton.addEventListener('click',sendRequest);updateRulesAcceptance();checkRooms(false)}
-  function syncDeparture(){const arrival=new Date(elements.arrival.value+'T00:00:00'),minDeparture=new Date(arrival.getTime()+86400000);elements.departure.min=iso(minDeparture);if(!elements.departure.value||elements.departure.value<=elements.arrival.value)elements.departure.value=iso(minDeparture)}
-  function payload(){return{arrival:elements.arrival.value,departure:elements.departure.value,requestedRoom:elements.requestedRoom.value,genderPreference:elements.genderPreference.value,occupant:elements.occupant.value.trim(),phone:elements.phone.value.trim(),email:elements.email.value.trim(),comment:elements.comment.value.trim(),rulesAccepted:elements.rulesAccepted.checked,rulesVersion:RULES_VERSION}}
-  function checkRooms(silent){setBusy(true);if(!silent){hideReceipt();show('warn','Vérification en cours...')}google.script.run.withSuccessHandler(result=>{setBusy(false);if(!result||!result.ok){renderRooms([]);if(!silent)show('bad',result&&result.error?result.error:'Erreur de vérification.');return}renderRooms(result.rooms||[]);fillSelect(result.rooms||[]);if(!silent)show('ok',result.availableCount+' chambre(s) disponible(s) sur '+result.totalCount+'.')}).withFailureHandler(err=>{setBusy(false);show('bad',err&&err.message?err.message:String(err))}).checkAvailability(payload())}
-  function sendRequest(){const data=payload();if(!data.occupant){show('warn','Le nom est obligatoire.');return}if(!data.phone&&!data.email){show('warn','Ajoute au moins un téléphone ou un email.');return}if(!data.rulesAccepted){show('warn','Lis le règlement jusqu’en bas puis coche la case d’acceptation.');elements.rulesBox.scrollIntoView({behavior:'smooth',block:'center'});return}setBusy(true);show('warn','Envoi en cours...');google.script.run.withSuccessHandler(result=>{setBusy(false);if(!result||!result.ok){show('bad',result&&result.error?result.error:'Demande refusée.');return}const receipt=result.receipt||buildFallbackReceipt(result,data);renderReceipt(receipt);show('ok',result.message+' Référence : '+result.id+'. Reçu disponible ci-dessous.');checkRooms(true)}).withFailureHandler(err=>{setBusy(false);show('bad',err&&err.message?err.message:String(err))}).createReservation(data)}
-  function buildFallbackReceipt(result,data){return{id:result.id,status:result.status||'En attente',occupant:data.occupant,phone:data.phone,email:data.email,genderPreference:data.genderPreference||'Indifférent',rulesVersion:RULES_VERSION,room:result.room,arrival:dateFr(data.arrival),departure:dateFr(data.departure),nights:result.nights||'',nightRate:'',amount:result.amount||0,createdAt:new Date().toLocaleString('fr-FR'),paymentNotice:'Montant prévisionnel, validation par la réception.'}}
-  function miniLogoSvg(){return '<svg viewBox="0 0 120 120" aria-hidden="true"><path d="M21 50 60 21l39 29" fill="none" stroke="#5a0d0d" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/><path d="M29 48v43h62V48" fill="none" stroke="#5a0d0d" stroke-width="5" stroke-linejoin="round"/><path d="M38 74h48v16H38z" fill="#f8f3e8" stroke="#5a0d0d" stroke-width="4"/><path d="M38 67v23M86 65v25M44 68h16c6 0 9 3 9 6H44z" fill="#c7a766" stroke="#5a0d0d" stroke-width="4" stroke-linejoin="round"/><path d="M36 96c12 6 36 8 52 0" fill="none" stroke="#c7a766" stroke-width="4" stroke-linecap="round"/></svg>'}
-  function renderReceipt(receipt){elements.receiptPanel.classList.remove('hidden');elements.receiptContent.innerHTML='<div class="receipt-brand">'+miniLogoSvg()+'<div><strong>La Cayenne de Paris</strong><span>Lit du passant · Réservation</span></div></div><div class="receipt-head"><div><h2>Reçu de demande de réservation</h2><p>Ce reçu confirme l’enregistrement de la demande. La réservation reste soumise à validation par la réception.</p></div><div class="receipt-ref"><div>Référence</div><div>'+safe(receipt.id)+'</div></div></div><div class="receipt-grid">'+receiptRow('Statut',receipt.status)+receiptRow('Date de demande',receipt.createdAt)+receiptRow('Demandeur',receipt.occupant)+receiptRow('Téléphone',receipt.phone||'-')+receiptRow('Email',receipt.email||'-')+receiptRow('Chambre homme / femme',receipt.genderPreference||'Indifférent')+receiptRow('Règlement accepté',receipt.rulesAcceptedAt||'Oui')+receiptRow('Chambre',receipt.room)+receiptRow('Arrivée',receipt.arrival)+receiptRow('Départ',receipt.departure)+receiptRow('Nombre de nuits',receipt.nights)+receiptRow('Tarif nuit',money(receipt.nightRate))+'</div><div class="receipt-total">Montant prévisionnel : '+money(receipt.amount)+'</div><div class="receipt-note">'+safe(receipt.paymentNotice||'Validation par la réception.')+'</div>';elements.receiptPanel.scrollIntoView({behavior:'smooth',block:'start'})}
-  function receiptRow(label,value){return '<div class="receipt-row"><span>'+safe(label)+'</span><strong>'+safe(value)+'</strong></div>'}
-  function hideReceipt(){elements.receiptPanel.classList.add('hidden');elements.receiptContent.innerHTML=''}
-  function newRequest(){hideReceipt();elements.occupant.value='';elements.phone.value='';elements.email.value='';elements.genderPreference.value='';elements.comment.value='';elements.rulesAccepted.checked=false;rulesRead=false;updateRulesAcceptance();show('ok','Nouvelle demande prête.');elements.occupant.focus()}
-  function renderRooms(rooms){elements.rooms.innerHTML='';if(!rooms.length){elements.rooms.innerHTML='<p>Aucune chambre disponible sur cette période.</p>';return}rooms.forEach(room=>{const div=document.createElement('div');div.className='room';div.innerHTML='<div><strong>'+safe(room.room)+' - '+safe(room.type||'Chambre')+'</strong><br><small>'+money(room.nightRate)+' / nuit - '+safe(room.reason||'')+'</small></div><span class="badge">Disponible</span>';elements.rooms.appendChild(div)})}
-  function fillSelect(rooms){const current=elements.requestedRoom.value;elements.requestedRoom.innerHTML='<option value="">Première chambre disponible</option>';rooms.forEach(room=>{const option=document.createElement('option');option.value=room.room;option.textContent=room.room+' - '+money(room.nightRate)+' / nuit';elements.requestedRoom.appendChild(option)});if([...elements.requestedRoom.options].some(option=>option.value===current))elements.requestedRoom.value=current}
-  function setBusy(isBusy){elements.checkButton.disabled=isBusy;elements.sendButton.disabled=isBusy;elements.checkButton.textContent=isBusy?'Vérification...':'Vérifier';elements.sendButton.textContent=isBusy?'Envoi...':'Envoyer la demande'}
-  function updateRulesAcceptance(){const box=elements.rulesBox,reachedBottom=box.scrollTop+box.clientHeight>=box.scrollHeight-8;if(reachedBottom)rulesRead=true;elements.rulesAccepted.disabled=!rulesRead;elements.rulesAcceptanceBox.classList.toggle('disabled',!rulesRead);elements.rulesHint.textContent=rulesRead?'Tu peux maintenant cocher l’acceptation du règlement.':'Déroule le règlement jusqu’en bas pour activer la case.'}
-  function show(type,text){elements.msg.className='msg show '+type;elements.msg.textContent=text}
-  function iso(date){return date.toISOString().slice(0,10)}
-  function dateFr(value){if(!value)return'';const parts=value.split('-');return parts.length===3?parts[2]+'/'+parts[1]+'/'+parts[0]:value}
-  function money(value){return new Intl.NumberFormat('fr-FR',{style:'currency',currency:'EUR',maximumFractionDigits:0}).format(Number(value||0))}
-  function safe(value){return String(value||'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[char]))}
+  const RULES_VERSION = 'reglement-lit-passant-2026-08-27';
+  let rulesRead = false;
+
+  const elements = {
+    arrival: document.getElementById('arrival'),
+    departure: document.getElementById('departure'),
+    requestedRoom: document.getElementById('requestedRoom'),
+    genderPreference: document.getElementById('genderPreference'),
+    occupant: document.getElementById('occupant'),
+    phone: document.getElementById('phone'),
+    email: document.getElementById('email'),
+    comment: document.getElementById('comment'),
+    rulesBox: document.getElementById('rulesBox'),
+    rulesAccepted: document.getElementById('rulesAccepted'),
+    rulesAcceptanceBox: document.getElementById('rulesAcceptanceBox'),
+    rulesHint: document.getElementById('rulesHint'),
+    checkButton: document.getElementById('checkButton'),
+    sendButton: document.getElementById('sendButton'),
+    msg: document.getElementById('msg'),
+    rooms: document.getElementById('rooms'),
+    receiptPanel: document.getElementById('receiptPanel'),
+    receiptContent: document.getElementById('receiptContent'),
+  };
+
+  window.addEventListener('load', init);
+
+  function init() {
+    const today = new Date();
+    const tomorrow = new Date(Date.now() + 86400000);
+
+    elements.arrival.value = iso(today);
+    elements.departure.value = iso(tomorrow);
+    elements.arrival.min = iso(today);
+    elements.departure.min = iso(tomorrow);
+
+    elements.arrival.addEventListener('change', syncDeparture);
+    elements.rulesBox.addEventListener('scroll', updateRulesAcceptance);
+    elements.checkButton.addEventListener('click', () => checkRooms(false));
+    elements.sendButton.addEventListener('click', sendRequest);
+
+    updateRulesAcceptance();
+    checkRooms(false);
+  }
+
+  function syncDeparture() {
+    const arrival = new Date(elements.arrival.value + 'T00:00:00');
+    const minDeparture = new Date(arrival.getTime() + 86400000);
+    elements.departure.min = iso(minDeparture);
+
+    if (!elements.departure.value || elements.departure.value <= elements.arrival.value) {
+      elements.departure.value = iso(minDeparture);
+    }
+  }
+
+  function payload() {
+    return {
+      arrival: elements.arrival.value,
+      departure: elements.departure.value,
+      requestedRoom: elements.requestedRoom.value,
+      genderPreference: elements.genderPreference.value,
+      occupant: elements.occupant.value.trim(),
+      phone: elements.phone.value.trim(),
+      email: elements.email.value.trim(),
+      comment: elements.comment.value.trim(),
+      rulesAccepted: elements.rulesAccepted.checked,
+      rulesVersion: RULES_VERSION,
+    };
+  }
+
+  function checkRooms(silent) {
+    setBusy(true);
+    if (!silent) {
+      hideReceipt();
+      show('warn', 'Verification en cours...');
+    }
+
+    google.script.run
+      .withSuccessHandler((result) => {
+        setBusy(false);
+        if (!result || !result.ok) {
+          renderRooms([]);
+          if (!silent) show('bad', result && result.error ? result.error : 'Erreur de verification.');
+          return;
+        }
+
+        renderRooms(result.rooms || []);
+        fillSelect(result.rooms || []);
+        if (!silent) show('ok', result.availableCount + ' chambre(s) disponible(s) sur ' + result.totalCount + '.');
+      })
+      .withFailureHandler((err) => {
+        setBusy(false);
+        show('bad', err && err.message ? err.message : String(err));
+      })
+      .checkAvailability(payload());
+  }
+
+  function sendRequest() {
+    const data = payload();
+
+    if (!data.occupant) {
+      show('warn', 'Le nom est obligatoire.');
+      return;
+    }
+
+    if (!data.phone && !data.email) {
+      show('warn', 'Ajoute au moins un telephone ou un email.');
+      return;
+    }
+
+    if (!data.genderPreference) {
+      show('warn', 'Choisis obligatoirement Homme ou Femme pour la chambre.');
+      elements.genderPreference.focus();
+      return;
+    }
+
+    if (!data.rulesAccepted) {
+      show('warn', 'Lis le règlement jusqu’en bas puis coche la case d’acceptation.');
+      elements.rulesBox.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return;
+    }
+
+    setBusy(true);
+    show('warn', 'Envoi en cours...');
+
+    google.script.run
+      .withSuccessHandler((result) => {
+        setBusy(false);
+        if (!result || !result.ok) {
+          show('bad', result && result.error ? result.error : 'Demande refusee.');
+          return;
+        }
+
+        const receipt = result.receipt || buildFallbackReceipt(result, data);
+        renderReceipt(receipt);
+        show('ok', result.message + ' Reference : ' + result.id + '. Reçu disponible ci-dessous.');
+        checkRooms(true);
+      })
+      .withFailureHandler((err) => {
+        setBusy(false);
+        show('bad', err && err.message ? err.message : String(err));
+      })
+      .createReservation(data);
+  }
+
+  function buildFallbackReceipt(result, data) {
+    return {
+      id: result.id,
+      status: result.status || 'En attente',
+      occupant: data.occupant,
+      phone: data.phone,
+      email: data.email,
+      genderPreference: data.genderPreference,
+      rulesVersion: RULES_VERSION,
+      room: result.room,
+      arrival: dateFr(data.arrival),
+      departure: dateFr(data.departure),
+      nights: result.nights || '',
+      nightRate: '',
+      amount: result.amount || 0,
+      createdAt: new Date().toLocaleString('fr-FR'),
+      paymentNotice: 'Montant prévisionnel, validation par la réception.',
+    };
+  }
+
+  function renderReceipt(receipt) {
+    elements.receiptPanel.classList.remove('hidden');
+    elements.receiptContent.innerHTML = `
+      <div class="receipt-head">
+        <div>
+          <h2>Reçu de demande de réservation</h2>
+          <p>Ce reçu confirme l’enregistrement de la demande. La réservation reste soumise à validation par la réception.</p>
+        </div>
+        <div class="receipt-ref">
+          <div>Référence</div>
+          <div>${safe(receipt.id)}</div>
+        </div>
+      </div>
+      <div class="receipt-grid">
+        ${receiptRow('Statut', receipt.status)}
+        ${receiptRow('Date de demande', receipt.createdAt)}
+        ${receiptRow('Demandeur', receipt.occupant)}
+        ${receiptRow('Téléphone', receipt.phone || '-')}
+        ${receiptRow('Email', receipt.email || '-')}
+        ${receiptRow('Chambre homme / femme', receipt.genderPreference || '-')}
+        ${receiptRow('Règlement accepté', receipt.rulesAcceptedAt || 'Oui')}
+        ${receiptRow('Chambre', receipt.room)}
+        ${receiptRow('Arrivée', receipt.arrival)}
+        ${receiptRow('Départ', receipt.departure)}
+        ${receiptRow('Nombre de nuits', receipt.nights)}
+        ${receiptRow('Tarif nuit', money(receipt.nightRate))}
+      </div>
+      <div class="receipt-total">Montant prévisionnel : ${money(receipt.amount)}</div>
+      <div class="receipt-note">${safe(receipt.paymentNotice || 'Validation par la réception.')}</div>
+    `;
+    elements.receiptPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  function receiptRow(label, value) {
+    return '<div class="receipt-row"><span>' + safe(label) + '</span><strong>' + safe(value) + '</strong></div>';
+  }
+
+  function hideReceipt() {
+    elements.receiptPanel.classList.add('hidden');
+    elements.receiptContent.innerHTML = '';
+  }
+
+  function newRequest() {
+    hideReceipt();
+    elements.occupant.value = '';
+    elements.phone.value = '';
+    elements.email.value = '';
+    elements.genderPreference.value = '';
+    elements.comment.value = '';
+    elements.rulesAccepted.checked = false;
+    rulesRead = false;
+    updateRulesAcceptance();
+    show('ok', 'Nouvelle demande prête.');
+    elements.occupant.focus();
+  }
+
+  function renderRooms(rooms) {
+    elements.rooms.innerHTML = '';
+
+    if (!rooms.length) {
+      elements.rooms.innerHTML = '<p>Aucune chambre disponible sur cette periode.</p>';
+      return;
+    }
+
+    rooms.forEach((room) => {
+      const div = document.createElement('div');
+      div.className = 'room';
+      div.innerHTML = '<div><strong>' + safe(room.room) + ' - ' + safe(room.type || 'Chambre') + '</strong><br><small>' + money(room.nightRate) + ' / nuit - ' + safe(room.reason || '') + '</small></div><span class="badge">Disponible</span>';
+      elements.rooms.appendChild(div);
+    });
+  }
+
+  function fillSelect(rooms) {
+    const current = elements.requestedRoom.value;
+    elements.requestedRoom.innerHTML = '<option value="">Premiere chambre disponible</option>';
+
+    rooms.forEach((room) => {
+      const option = document.createElement('option');
+      option.value = room.room;
+      option.textContent = room.room + ' - ' + money(room.nightRate) + ' / nuit';
+      elements.requestedRoom.appendChild(option);
+    });
+
+    if ([...elements.requestedRoom.options].some((option) => option.value === current)) {
+      elements.requestedRoom.value = current;
+    }
+  }
+
+  function setBusy(isBusy) {
+    elements.checkButton.disabled = isBusy;
+    elements.sendButton.disabled = isBusy;
+    elements.checkButton.textContent = isBusy ? 'Verification...' : 'Verifier';
+    elements.sendButton.textContent = isBusy ? 'Envoi...' : 'Envoyer la demande';
+  }
+
+  function updateRulesAcceptance() {
+    const box = elements.rulesBox;
+    const reachedBottom = box.scrollTop + box.clientHeight >= box.scrollHeight - 8;
+    if (reachedBottom) rulesRead = true;
+
+    elements.rulesAccepted.disabled = !rulesRead;
+    elements.rulesAcceptanceBox.classList.toggle('disabled', !rulesRead);
+    elements.rulesHint.textContent = rulesRead
+      ? 'Tu peux maintenant cocher l’acceptation du règlement.'
+      : 'Déroule le règlement jusqu’en bas pour activer la case.';
+  }
+
+  function show(type, text) {
+    elements.msg.className = 'msg show ' + type;
+    elements.msg.textContent = text;
+  }
+
+  function iso(date) {
+    return date.toISOString().slice(0, 10);
+  }
+
+  function dateFr(value) {
+    if (!value) return '';
+    const parts = value.split('-');
+    if (parts.length !== 3) return value;
+    return parts[2] + '/' + parts[1] + '/' + parts[0];
+  }
+
+  function money(value) {
+    return new Intl.NumberFormat('fr-FR', {
+      style: 'currency',
+      currency: 'EUR',
+      maximumFractionDigits: 0,
+    }).format(Number(value || 0));
+  }
+
+  function safe(value) {
+    return String(value || '').replace(/[&<>"']/g, (char) => ({
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;',
+      "'": '&#039;',
+    }[char]));
+  }
 </script>
 </body>
 </html>
