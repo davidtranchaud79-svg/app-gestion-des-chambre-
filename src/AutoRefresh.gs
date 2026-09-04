@@ -4,7 +4,7 @@
 function setupAutoRefresh() {
   installAutoRefreshTrigger();
   autoRefreshSheet();
-  return 'Actualisation automatique installée : toutes les 5 minutes.';
+  return 'Actualisation automatique installée : toutes les vues sont remises à jour toutes les 5 minutes.';
 }
 
 function installAutoRefreshTrigger() {
@@ -59,7 +59,7 @@ function autoRefreshSheet() {
     }
 
     SpreadsheetApp.flush();
-    return 'Sheet actualisé : ' + Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'dd/MM/yyyy HH:mm:ss');
+    return 'Sheet actualisé à la date du jour : ' + Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'dd/MM/yyyy HH:mm:ss');
   } catch (err) {
     if (typeof logAdminNotification_ === 'function') {
       logAdminNotification_('AUTO_REFRESH', 'warning', '', err && err.message ? err.message : String(err));
