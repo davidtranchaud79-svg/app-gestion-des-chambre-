@@ -133,6 +133,7 @@ function handleTodayOpenSync(e) {
 
 function planningRefreshTodayView_(ss) {
   planningSetTodayReference_(ss);
+  planningConnectSummaryViews_(ss);
   if (typeof refreshRegistryOperationalFlags_ === 'function') refreshRegistryOperationalFlags_(ss);
   if (typeof repairRoomStatusFormulas_ === 'function') repairRoomStatusFormulas_(ss);
   buildRoomPlanVisual_(ss);
@@ -179,6 +180,65 @@ function planningSetTodayReference_(ss) {
       .setValue(new Date(today.getFullYear(), today.getMonth(), 1))
       .setNumberFormat('mmmm yyyy');
   }
+
+  planningConnectSummaryViews_(ss);
+}
+
+function planningConnectSummaryViews_(ss) {
+  ss = ss || planningOpenSpreadsheet_();
+  planningConnectDashboard_(ss);
+  planningConnectAccueil_(ss);
+}
+
+function planningConnectDashboard_(ss) {
+  const dashboard = ss.getSheetByName('Dashboard');
+  if (!dashboard) return;
+
+  const countStatus = ';Registre!$O$6:$O;"<>Annulé";Registre!$O$6:$O;"<>Annulée";Registre!$O$6:$O;"<>Refusé";Registre!$O$6:$O;"<>Refusée";Registre!$O$6:$O;"<>No-show"';
+  const filterStatus = ';Registre!$O$6:$O<>"Annulé";Registre!$O$6:$O<>"Annulée";Registre!$O$6:$O<>"Refusé";Registre!$O$6:$O<>"Refusée";Registre!$O$6:$O<>"No-show"';
+
+  const formulas = {
+    B5: '=COUNTIFS(Chambres!$A$6:$A;"<>";Chambres!$H$6:$H;"Ouverte")',
+    D5: '=IFERROR(COUNTUNIQUE(FILTER(Registre!$C$6:$C;Registre!$C$6:$C<>"";Registre!$G$6:$G<=$B$2;Registre!$H$6:$H>$B$2' + filterStatus + '));0)',
+    F5: '=MAX(0;B5-D5)',
+    H5: '=COUNTIFS(Registre!$G$6:$G;">="&$B$2;Registre!$G$6:$G;"<"&($B$2+1)' + countStatus + ')',
+    J5: '=COUNTIFS(Registre!$H$6:$H;">="&$B$2;Registre!$H$6:$H;"<"&($B$2+1)' + countStatus + ')',
+    B8: '=IF(B5=0;0;D5/B5)',
+    D8: '=COUNTIFS(Registre!$B$6:$B;"Résident";Registre!$G$6:$G;"<="&$B$2;Registre!$H$6:$H;">"&$B$2' + countStatus + ')',
+    F8: '=COUNTIFS(Registre!$B$6:$B;"Court séjour";Registre!$G$6:$G;"<="&$B$2;Registre!$H$6:$H;">"&$B$2' + countStatus + ')',
+    H8: '=SUMIFS(Registre!$L$6:$L;Registre!$G$6:$G;">="&DATE(YEAR($B$2);MONTH($B$2);1);Registre!$G$6:$G;"<"&EDATE(DATE(YEAR($B$2);MONTH($B$2);1);1)' + countStatus + ')',
+    J8: '=SUMIFS(Registre!$M$6:$M;Registre!$G$6:$G;">="&DATE(YEAR($B$2);MONTH($B$2);1);Registre!$G$6:$G;"<"&EDATE(DATE(YEAR($B$2);MONTH($B$2);1);1)' + countStatus + ')',
+    L8: '=SUMIFS(Registre!$N$6:$N;Registre!$G$6:$G;">="&DATE(YEAR($B$2);MONTH($B$2);1);Registre!$G$6:$G;"<"&EDATE(DATE(YEAR($B$2);MONTH($B$2);1);1)' + countStatus + ')',
+    N8: '=COUNTIF(Registre!$V$6:$V;"Chevauchement")',
+  };
+
+  Object.keys(formulas).forEach(function(cell) {
+    dashboard.getRange(cell).setFormula(formulas[cell]);
+  });
+  dashboard.getRange('B8').setNumberFormat('0.0%');
+  ['H8', 'J8', 'L8'].forEach(function(cell) {
+    dashboard.getRange(cell).setNumberFormat('#,##0.00 €');
+  });
+}
+
+function planningConnectAccueil_(ss) {
+  const accueil = ss.getSheetByName('Accueil');
+  if (!accueil) return;
+
+  const formulas = {
+    A5: '="CHAMBRES OCCUPÉES"&CHAR(10)&Dashboard!D5',
+    D5: '="CHAMBRES LIBRES"&CHAR(10)&Dashboard!F5',
+    G5: '="TAUX D’OCCUPATION"&CHAR(10)&TEXT(Dashboard!B8;"0.0%")',
+    J5: '="IMPAYÉS"&CHAR(10)&COUNTIF(Registre!$X$6:$X;"Impayé")',
+    A9: '="ARRIVÉES AUJOURD’HUI"&CHAR(10)&Dashboard!H5',
+    D9: '="DÉPARTS AUJOURD’HUI"&CHAR(10)&Dashboard!J5',
+    G9: '="RÉSIDENTS PRÉSENTS"&CHAR(10)&Dashboard!D8',
+    J9: '="COURTS SÉJOURS"&CHAR(10)&Dashboard!F8',
+  };
+
+  Object.keys(formulas).forEach(function(cell) {
+    accueil.getRange(cell).setFormula(formulas[cell]).setWrap(true);
+  });
 }
 
 function planningShiftCalendarMonth_(offset) {
