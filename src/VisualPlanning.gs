@@ -27,6 +27,8 @@ function onOpen() {
     .addItem('Ajout manuel résident', 'openResidentSidebar')
     .addItem('Intégrer Saisie résidents', 'integrateResidentInputRows')
     .addItem('Installer synchro automatique', 'setupSheetSyncTrigger')
+    .addItem('Ouvrir à aujourd’hui', 'setTodayDashboardAndCalendar')
+    .addItem('Installer ouverture date du jour', 'setupTodayOpenTrigger')
     .addSeparator()
     .addItem('Actualiser couleurs + planning', 'setupVisualPlanning')
     .addItem('Reconstruire le plan chambres', 'buildRoomPlanVisual')
@@ -36,13 +38,21 @@ function onOpen() {
     .addItem('Calendrier : mois actuel', 'planningCalendarCurrentMonth')
     .addItem('Calendrier : mois suivant', 'planningCalendarNextMonth')
     .addToUi();
+
+  try {
+    planningSetTodayReference_(SpreadsheetApp.getActiveSpreadsheet());
+  } catch (err) {
+    console.error(err && err.stack ? err.stack : err);
+  }
 }
 
 function setupVisualPlanning() {
   const ss = planningOpenSpreadsheet_();
+  planningSetTodayReference_(ss);
   if (typeof refreshRegistryOperationalFlags_ === 'function') refreshRegistryOperationalFlags_(ss);
   if (typeof repairRoomStatusFormulas_ === 'function') repairRoomStatusFormulas_(ss);
-  refreshVisualPlanning_(ss);
+  buildRoomPlanVisual_(ss);
+  buildCalendarVisual_(ss, today_());
   ss.toast('Couleurs, plan chambres et calendrier actualisés.', 'Gestion chambres', 5);
   return 'Couleurs, plan chambres et calendrier actualisés.';
 }
@@ -81,6 +91,71 @@ function planningCalendarCurrentMonth() {
 
 function planningCalendarNextMonth() {
   planningShiftCalendarMonth_(1);
+}
+
+function setTodayDashboardAndCalendar() {
+  const ss = planningOpenSpreadsheet_();
+  planningRefreshTodayView_(ss);
+  const dashboard = ss.getSheetByName('Dashboard');
+  if (dashboard) ss.setActiveSheet(dashboard);
+  ss.toast('Dashboard et calendrier remis à la date du jour.', 'Gestion chambres', 5);
+  return 'Dashboard et calendrier remis à la date du jour.';
+}
+
+function setupTodayOpenTrigger() {
+  ScriptApp.getProjectTriggers().forEach(function(trigger) {
+    if (trigger.getHandlerFunction() === 'handleTodayOpenSync') {
+      ScriptApp.deleteTrigger(trigger);
+    }
+  });
+
+  ScriptApp.newTrigger('handleTodayOpenSync')
+    .forSpreadsheet(CONFIG.spreadsheetId)
+    .onOpen()
+    .create();
+
+  return 'Ouverture automatique installée : le dashboard et le calendrier repassent à la date du jour.';
+}
+
+function handleTodayOpenSync(e) {
+  const lock = LockService.getScriptLock();
+  if (!lock.tryLock(10000)) return;
+
+  try {
+    const ss = e && e.source ? e.source : planningOpenSpreadsheet_();
+    planningRefreshTodayView_(ss);
+  } catch (err) {
+    console.error(err && err.stack ? err.stack : err);
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function planningRefreshTodayView_(ss) {
+  planningSetTodayReference_(ss);
+  if (typeof refreshRegistryOperationalFlags_ === 'function') refreshRegistryOperationalFlags_(ss);
+  if (typeof repairRoomStatusFormulas_ === 'function') repairRoomStatusFormulas_(ss);
+  buildRoomPlanVisual_(ss);
+  buildCalendarVisual_(ss, today_());
+  SpreadsheetApp.flush();
+}
+
+function planningSetTodayReference_(ss) {
+  ss = ss || planningOpenSpreadsheet_();
+  const dashboard = ss.getSheetByName('Dashboard');
+  const calendar = ss.getSheetByName('Calendrier');
+
+  if (dashboard) {
+    dashboard.getRange('B2').setFormula('=TODAY()').setNumberFormat('dd/MM/yyyy');
+    dashboard.getRange('E2').setFormula('=NOW()').setNumberFormat('dd/MM/yyyy HH:mm');
+  }
+
+  if (calendar) {
+    const today = today_();
+    calendar.getRange('B1')
+      .setValue(new Date(today.getFullYear(), today.getMonth(), 1))
+      .setNumberFormat('mmmm yyyy');
+  }
 }
 
 function planningShiftCalendarMonth_(offset) {
