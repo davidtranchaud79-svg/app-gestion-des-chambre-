@@ -27,7 +27,7 @@ function onOpen() {
     .addItem('Ajout manuel résident', 'openResidentSidebar')
     .addItem('Intégrer Saisie résidents', 'integrateResidentInputRows')
     .addItem('Installer synchro automatique', 'setupSheetSyncTrigger')
-    .addItem('Ouvrir à aujourd’hui', 'setTodayDashboardAndCalendar')
+    .addItem('Ouvrir toutes les vues à aujourd’hui', 'setTodayDashboardAndCalendar')
     .addItem('Installer ouverture date du jour', 'setupTodayOpenTrigger')
     .addSeparator()
     .addItem('Actualiser couleurs + planning', 'setupVisualPlanning')
@@ -53,8 +53,8 @@ function setupVisualPlanning() {
   if (typeof repairRoomStatusFormulas_ === 'function') repairRoomStatusFormulas_(ss);
   buildRoomPlanVisual_(ss);
   buildCalendarVisual_(ss, today_());
-  ss.toast('Couleurs, plan chambres et calendrier actualisés.', 'Gestion chambres', 5);
-  return 'Couleurs, plan chambres et calendrier actualisés.';
+  ss.toast('Toutes les vues sont actualisées à la date du jour.', 'Gestion chambres', 5);
+  return 'Toutes les vues sont actualisées à la date du jour.';
 }
 
 function refreshVisualPlanning_(ss) {
@@ -98,8 +98,8 @@ function setTodayDashboardAndCalendar() {
   planningRefreshTodayView_(ss);
   const dashboard = ss.getSheetByName('Dashboard');
   if (dashboard) ss.setActiveSheet(dashboard);
-  ss.toast('Dashboard et calendrier remis à la date du jour.', 'Gestion chambres', 5);
-  return 'Dashboard et calendrier remis à la date du jour.';
+  ss.toast('Accueil, rapports, dashboard, impayés, plan et calendrier remis à la date du jour.', 'Gestion chambres', 5);
+  return 'Accueil, rapports, dashboard, impayés, plan et calendrier remis à la date du jour.';
 }
 
 function setupTodayOpenTrigger() {
@@ -114,7 +114,7 @@ function setupTodayOpenTrigger() {
     .onOpen()
     .create();
 
-  return 'Ouverture automatique installée : le dashboard et le calendrier repassent à la date du jour.';
+  return 'Ouverture automatique installée : les vues de synthèse repassent à la date du jour.';
 }
 
 function handleTodayOpenSync(e) {
@@ -142,16 +142,39 @@ function planningRefreshTodayView_(ss) {
 
 function planningSetTodayReference_(ss) {
   ss = ss || planningOpenSpreadsheet_();
+  const today = today_();
+  const accueil = ss.getSheetByName('Accueil');
+  const rapports = ss.getSheetByName('Rapports');
   const dashboard = ss.getSheetByName('Dashboard');
+  const impayes = ss.getSheetByName('Impayés');
+  const liveAvailability = ss.getSheetByName('Disponibilite_live');
   const calendar = ss.getSheetByName('Calendrier');
+
+  if (accueil) {
+    accueil.getRange('A2')
+      .setFormula('="Pilotage du foyer • "&TEXT(TODAY();"dd/mm/yyyy")');
+  }
+
+  if (rapports) {
+    rapports.getRange('B2').setFormula('=TODAY()').setNumberFormat('dd/MM/yyyy');
+  }
 
   if (dashboard) {
     dashboard.getRange('B2').setFormula('=TODAY()').setNumberFormat('dd/MM/yyyy');
     dashboard.getRange('E2').setFormula('=NOW()').setNumberFormat('dd/MM/yyyy HH:mm');
   }
 
+  if (impayes) {
+    impayes.getRange('B2').setFormula('=NOW()').setNumberFormat('dd/MM/yyyy HH:mm');
+  }
+
+  if (liveAvailability) {
+    liveAvailability.getRange('B2').setFormula('=TODAY()').setNumberFormat('dd/MM/yyyy');
+    liveAvailability.getRange('D2').setFormula('=TODAY()+1').setNumberFormat('dd/MM/yyyy');
+    liveAvailability.getRange('F2').setFormula('=NOW()').setNumberFormat('dd/MM/yyyy HH:mm');
+  }
+
   if (calendar) {
-    const today = today_();
     calendar.getRange('B1')
       .setValue(new Date(today.getFullYear(), today.getMonth(), 1))
       .setNumberFormat('mmmm yyyy');
