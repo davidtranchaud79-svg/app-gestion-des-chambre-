@@ -42,6 +42,10 @@ function autoRefreshSheet() {
   try {
     const ss = SpreadsheetApp.openById(CONFIG.spreadsheetId);
 
+    if (typeof planningSetTodayReference_ === 'function') {
+      planningSetTodayReference_(ss);
+    }
+
     if (typeof refreshRegistryOperationalFlags_ === 'function') {
       refreshRegistryOperationalFlags_(ss);
     }
