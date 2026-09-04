@@ -522,13 +522,13 @@ function repairRoomStatusFormulas_(ss) {
     const roomCell = '$A' + row;
     const manualCell = '$H' + row;
     sheet.getRange(row, 9).setFormula(
-      '=IF(' + roomCell + '="","",IF(COUNTIFS(Registre!$C:$C,' + roomCell + ',Registre!$B:$B,"Résident",Registre!$G:$G,"<="&TODAY(),Registre!$H:$H,">"&TODAY(),Registre!$O:$O,"<>Annulé",Registre!$O:$O,"<>No-show")>0,"Résident",IF(COUNTIFS(Registre!$C:$C,' + roomCell + ',Registre!$B:$B,"Court séjour",Registre!$G:$G,"<="&TODAY(),Registre!$H:$H,">"&TODAY(),Registre!$O:$O,"<>Annulé",Registre!$O:$O,"<>No-show")>0,"Court séjour","")))'
+      '=IF(' + roomCell + '="";"";IF(COUNTIFS(Registre!$C:$C;' + roomCell + ';Registre!$B:$B;"Résident";Registre!$G:$G;"<="&TODAY();Registre!$H:$H;">"&TODAY();Registre!$O:$O;"<>Annulé";Registre!$O:$O;"<>No-show")>0;"Résident";IF(COUNTIFS(Registre!$C:$C;' + roomCell + ';Registre!$B:$B;"Court séjour";Registre!$G:$G;"<="&TODAY();Registre!$H:$H;">"&TODAY();Registre!$O:$O;"<>Annulé";Registre!$O:$O;"<>No-show")>0;"Court séjour";"")))'
     );
     sheet.getRange(row, 10).setFormula(
-      '=IF(' + roomCell + '="","",IF(' + manualCell + '="Hors service","Hors service",IF(AND(COUNTIFS(Registre!$C:$C,' + roomCell + ',Registre!$G:$G,TODAY(),Registre!$O:$O,"<>Annulé",Registre!$O:$O,"<>No-show")>0,COUNTIFS(Registre!$C:$C,' + roomCell + ',Registre!$H:$H,TODAY(),Registre!$O:$O,"<>Annulé",Registre!$O:$O,"<>No-show")>0),"Rotation du jour",IF(COUNTIFS(Registre!$C:$C,' + roomCell + ',Registre!$G:$G,TODAY(),Registre!$O:$O,"<>Annulé",Registre!$O:$O,"<>No-show")>0,"Arrivée du jour",IF(COUNTIFS(Registre!$C:$C,' + roomCell + ',Registre!$H:$H,TODAY(),Registre!$O:$O,"<>Annulé",Registre!$O:$O,"<>No-show")>0,"Départ du jour",IF(COUNTIFS(Registre!$C:$C,' + roomCell + ',Registre!$G:$G,"<="&TODAY(),Registre!$H:$H,">"&TODAY(),Registre!$O:$O,"<>Annulé",Registre!$O:$O,"<>No-show")>0,"Occupée","Libre"))))))'
+      '=IF(' + roomCell + '="";"";IF(' + manualCell + '="Hors service";"Hors service";IF(AND(COUNTIFS(Registre!$C:$C;' + roomCell + ';Registre!$G:$G;TODAY();Registre!$O:$O;"<>Annulé";Registre!$O:$O;"<>No-show")>0;COUNTIFS(Registre!$C:$C;' + roomCell + ';Registre!$H:$H;TODAY();Registre!$O:$O;"<>Annulé";Registre!$O:$O;"<>No-show")>0);"Rotation du jour";IF(COUNTIFS(Registre!$C:$C;' + roomCell + ';Registre!$G:$G;TODAY();Registre!$O:$O;"<>Annulé";Registre!$O:$O;"<>No-show")>0;"Arrivée du jour";IF(COUNTIFS(Registre!$C:$C;' + roomCell + ';Registre!$H:$H;TODAY();Registre!$O:$O;"<>Annulé";Registre!$O:$O;"<>No-show")>0;"Départ du jour";IF(COUNTIFS(Registre!$C:$C;' + roomCell + ';Registre!$G:$G;"<="&TODAY();Registre!$H:$H;">"&TODAY();Registre!$O:$O;"<>Annulé";Registre!$O:$O;"<>No-show")>0;"Occupée";"Libre"))))))'
     );
     sheet.getRange(row, 11).setFormula(
-      '=IF(' + roomCell + '="","",IF(J' + row + '="Libre","Attribuer",IF(J' + row + '="Arrivée du jour","Préparer accueil",IF(J' + row + '="Départ du jour","Contrôler départ",IF(J' + row + '="Rotation du jour","Nettoyage + accueil",IF(J' + row + '="Hors service","Maintenance","Suivi"))))))'
+      '=IF(' + roomCell + '="";"";IF(J' + row + '="Libre";"Attribuer";IF(J' + row + '="Arrivée du jour";"Préparer accueil";IF(J' + row + '="Départ du jour";"Contrôler départ";IF(J' + row + '="Rotation du jour";"Nettoyage + accueil";IF(J' + row + '="Hors service";"Maintenance";"Suivi"))))))'
     );
   }
 }
